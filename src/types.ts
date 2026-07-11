@@ -3,6 +3,26 @@
 /** Starting archetype taxonomy — user-extendable via Settings (stored in meta). */
 export const DEFAULT_TAGS = ['TAG', 'LAG', 'Loose Passive', 'Tight Passive'];
 
+/** A player-specific tendency to exploit. `tag` is the axis id (== its level-1 name). */
+export interface Exploit {
+  tag: string;
+  level: 1 | 2; // 1 = on, 2 = "!" (extreme)
+  confirmations?: number; // showdown-confirmed reads ("×N")
+}
+/** An exploit axis: a level-1 label (also the id) and its level-2 ("!") label. */
+export interface ExploitAxis {
+  l1: string;
+  l2: string;
+}
+export const DEFAULT_EXPLOIT_AXES: ExploitAxis[] = [
+  { l1: 'Folds', l2: 'Folds!' },
+  { l1: 'Calls', l2: 'Station!' },
+  { l1: 'Bluffs', l2: 'Bluffs!' },
+  { l1: 'Value', l2: 'Value!' },
+  { l1: 'Merges', l2: 'Merges!' },
+  { l1: 'SizeTell', l2: 'SizeTell!' },
+];
+
 export interface Note {
   t: string; // "YYYY-MM-DD HH:mm"
   text: string;
@@ -37,7 +57,8 @@ export interface Player {
   id?: number;
   name: string;
   nameLower: string; // unique index (case-insensitive identity)
-  tag: string; // '' = untagged
+  tag: string; // '' = untagged (archetype — single)
+  exploits: Exploit[]; // player-specific tendencies (multiple); see db/exploits.ts
   notes: Note[];
   venues: Record<string, number>; // venueName -> sessions seen there
   sessions: number;
@@ -134,6 +155,7 @@ export interface Settings {
   defaultView: 'table' | 'list';
   compactRows: boolean;
   tags: string[];
+  exploitAxes: ExploitAxis[];
 }
 
 export const defaultSettings = (): Settings => ({
@@ -142,6 +164,7 @@ export const defaultSettings = (): Settings => ({
   defaultView: 'list',
   compactRows: true,
   tags: [...DEFAULT_TAGS],
+  exploitAxes: [...DEFAULT_EXPLOIT_AXES],
 });
 
 /* ---------- small shared helpers ---------- */

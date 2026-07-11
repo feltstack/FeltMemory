@@ -423,3 +423,23 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .pcard-note .ts{ font-size:10.5px; color:var(--text-faint); margin-top:2px; }
 .pcard-nonote{ font-size:12.5px; color:var(--text-faint); }
 .pcard-note-add{ padding-left:0 !important; margin:10px 0 0 !important; }
+/* ---------- Exploit-tag chips ---------- */
+.exploit-row{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 2px; }
+.exploit-chip{ display:inline-flex; align-items:stretch; border-radius:999px; border:1px solid var(--border); background:var(--surface-2); overflow:hidden; }
+.exploit-chip .ec-body{ border:none; background:none; color:var(--text-faint); font-size:12px; font-weight:700; padding:5px 11px; cursor:pointer; display:flex; align-items:center; gap:4px; min-height:34px; }
+.exploit-chip.lvl1{ border-color:var(--blue); background:rgba(77,159,255,.14); }
+.exploit-chip.lvl1 .ec-body{ color:var(--blue); }
+.exploit-chip.lvl2{ border-color:var(--accent); background:var(--accent); }
+.exploit-chip.lvl2 .ec-body{ color:#1a1200; }
+.ec-count{ font-weight:900; }
+.ec-confirm{ border:none; border-left:1px solid var(--border); background:transparent; color:var(--text-faint); font-size:12px; padding:0 9px; cursor:pointer; }
+.exploit-chip.lvl1 .ec-confirm{ color:var(--blue); border-left-color:rgba(77,159,255,.5); }
+.exploit-chip.lvl2 .ec-confirm{ color:#1a1200; border-left-color:rgba(0,0,0,.25); }
+
+/* exploit mini badges on the dense seat rows (top 1-2 by level then confirmations) */
+.row-ex{ flex:none; font-size:9px; font-weight:800; border-radius:5px; padding:1px 4px; white-space:nowrap; line-height:1.5; }
+.row-ex.lvl1{ color:var(--blue); border:1px solid var(--blue); }
+.row-ex.lvl2{ color:#1a1200; background:var(--accent); border:1px solid var(--accent); }
+.axis-add{ flex-wrap:wrap; }
+.axis-add input{ flex:1 1 130px; min-width:0; }
+.chip.ex-filter.active{ background:var(--blue); border-color:var(--blue); color:#04121f; }

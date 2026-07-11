@@ -14,6 +14,21 @@ export default function SettingsScreen() {
   const { toast } = useUi();
   const fileRef = useRef<HTMLInputElement>(null);
   const [newTag, setNewTag] = useState('');
+  const [newAx1, setNewAx1] = useState('');
+  const [newAx2, setNewAx2] = useState('');
+  const addAxis = () => {
+    const l1 = newAx1.trim();
+    if (!l1 || settings.exploitAxes.some((a) => a.l1.toLowerCase() === l1.toLowerCase())) {
+      setNewAx1('');
+      setNewAx2('');
+      return;
+    }
+    updateSettings({ exploitAxes: [...settings.exploitAxes, { l1, l2: newAx2.trim() || `${l1}!` }] });
+    setNewAx1('');
+    setNewAx2('');
+  };
+  const removeAxis = (l1: string) =>
+    updateSettings({ exploitAxes: settings.exploitAxes.filter((a) => a.l1 !== l1) });
 
   const addTag = () => {
     const t = newTag.trim();
@@ -142,6 +157,34 @@ export default function SettingsScreen() {
             onKeyDown={(e) => e.key === 'Enter' && addTag()}
           />
           <button onClick={addTag}>Add</button>
+        </div>
+      </div>
+
+      <div className="section-title">Exploit axes</div>
+      <div className="card">
+        <div className="chip-row" style={{ margin: '2px 0 10px' }}>
+          {settings.exploitAxes.map((a) => (
+            <button key={a.l1} className="chip" title="Tap to remove axis" onClick={() => removeAxis(a.l1)}>
+              {a.l1} / {a.l2} ✕
+            </button>
+          ))}
+        </div>
+        <div className="note-add axis-add">
+          <input
+            placeholder="On label (e.g. Overfolds)"
+            value={newAx1}
+            onChange={(e) => setNewAx1(e.target.value)}
+          />
+          <input
+            placeholder={'\u201C!\u201D label (e.g. Overfolds!)'}
+            value={newAx2}
+            onChange={(e) => setNewAx2(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && addAxis()}
+          />
+          <button onClick={addAxis}>Add</button>
+        </div>
+        <div className="hint" style={{ marginTop: 8 }}>
+          Two intensities per axis — tap a player's chip to cycle off → on → “!”.
         </div>
       </div>
 

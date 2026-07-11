@@ -4,10 +4,12 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, seatXY } from '../db/stats';
+import { exploitLabel, topExploits } from '../db/exploits';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from '../components/Icons';
 import { Switch, anchorOf, initialsOf } from '../components/Bits';
+import { ExploitChips } from '../components/ExploitChips';
 import { fmt, pct, tagColor, type Player, type Seat } from '../types';
 
 /** Map of playerId -> Player for all seated players (live). */
@@ -475,6 +477,13 @@ function SeatList({ editing = false }: { editing?: boolean }) {
             <div className="row-body">
               <div className="row-name-line">
                 <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
+                {!s.hero &&
+                  topExploits(p?.exploits ?? [], 2).map((e) => (
+                    <span key={e.tag} className={`row-ex lvl${e.level}`}>
+                      {exploitLabel(e, settings.exploitAxes)}
+                      {e.confirmations ? `×${e.confirmations}` : ''}
+                    </span>
+                  ))}
                 {!s.hero && notePreview && <span className="row-note">— {notePreview}</span>}
                 {badge && <span className="pending-chip">{badge}</span>}
                 {s.stack && <span className="row-stack">${s.stack}</span>}
@@ -658,6 +667,7 @@ function PlayerCards() {
                     <Switch on={p.verified} onToggle={() => void repo.toggleVerified(p.id!)} />
                   </div>
                 )}
+                <ExploitChips playerId={p.id!} exploits={p.exploits ?? []} axes={settings.exploitAxes} />
                 <div className="pcard-notes">
                   {recent.length === 0 && <div className="pcard-nonote">No notes yet</div>}
                   {recent.map((n, i) => (

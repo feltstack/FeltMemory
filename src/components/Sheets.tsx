@@ -7,6 +7,7 @@ import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from './Icons';
 import { StatBox, Switch, TagChip, initialsOf } from './Bits';
+import { ExploitChips } from './ExploitChips';
 import { fmt, pct, tagColor, tagSlug, type Player } from '../types';
 
 export function SheetHost() {
@@ -144,6 +145,8 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
           <Switch on={player.verified} onToggle={() => repo.toggleVerified(playerId)} />
         </div>
       )}
+      <div className="section-title">Exploits</div>
+      <ExploitChips playerId={playerId} exploits={player.exploits ?? []} axes={settings.exploitAxes} />
       <div className="stat-grid">
         <StatBox v={fmt(pct(c.vpip, c.dealt))} label="VPIP" />
         <StatBox v={fmt(pct(c.pfr, c.dealt))} label="PFR" />

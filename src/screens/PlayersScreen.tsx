@@ -51,6 +51,7 @@ export default function PlayersScreen() {
   const [sortKey, setSortKey] = useState<SortKey>('hands');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [tagFilter, setTagFilter] = useState<string[]>([]); // empty = all; '' via UNTAGGED
+  const [exFilter, setExFilter] = useState<string[]>([]); // exploit axis ids (AND)
   const players = useLiveQuery(() => db.players.toArray(), []) ?? [];
 
   // Filterable taxonomy = settings tags ∪ tags still present on players
@@ -60,8 +61,18 @@ export default function PlayersScreen() {
     return [...new Set([...settings.tags, ...inUse])];
   }, [settings.tags, players]);
 
+  const allAxes = useMemo(() => {
+    const ids = settings.exploitAxes.map((a) => a.l1);
+    players.forEach((p) => (p.exploits ?? []).forEach((e) => {
+      if (!ids.includes(e.tag)) ids.push(e.tag);
+    }));
+    return ids;
+  }, [settings.exploitAxes, players]);
+
   const toggleTag = (key: string) =>
     setTagFilter((cur) => (cur.includes(key) ? cur.filter((t) => t !== key) : [...cur, key]));
+  const toggleEx = (key: string) =>
+    setExFilter((cur) => (cur.includes(key) ? cur.filter((t) => t !== key) : [...cur, key]));
 
   const rows = players
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
@@ -69,6 +80,11 @@ export default function PlayersScreen() {
       (p) =>
         tagFilter.length === 0 ||
         tagFilter.includes(p.tag ? p.tag : UNTAGGED),
+    )
+    .filter(
+      (p) =>
+        exFilter.length === 0 ||
+        exFilter.every((ax) => (p.exploits ?? []).some((e) => e.tag === ax)),
     )
     .sort((a, b) => {
       const av = sortValue(a, sortKey);
@@ -93,7 +109,9 @@ export default function PlayersScreen() {
   };
 
   const filteredNote =
-    tagFilter.length > 0 ? ` · ${rows.length} of ${players.length} shown` : '';
+    tagFilter.length > 0 || exFilter.length > 0
+      ? ` · ${rows.length} of ${players.length} shown`
+      : '';
 
   return (
     <div className="screen">
@@ -135,6 +153,26 @@ export default function PlayersScreen() {
           </button>
         )}
       </div>
+
+      {allAxes.length > 0 && (
+        <div className="chip-row filter-chips">
+          {allAxes.map((ax) => (
+            <button
+              key={ax}
+              className={`chip ex-filter ${exFilter.includes(ax) ? 'active' : ''}`}
+              onClick={() => toggleEx(ax)}
+              title={`Filter: players tagged ${ax}`}
+            >
+              {ax}
+            </button>
+          ))}
+          {exFilter.length > 0 && (
+            <button className="chip" onClick={() => setExFilter([])} title="Clear exploit filters">
+              ✕ Clear
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="sort-bar">
         <label>Sort</label>

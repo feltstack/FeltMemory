@@ -8,6 +8,7 @@ import {
   computeHandDeltas,
   nextButtonSeat,
 } from './stats';
+import { confirmExploit, cycleExploit } from './exploits';
 import {
   defaultSettings,
   emptyCounters,
@@ -38,6 +39,7 @@ export async function findOrCreatePlayer(
     name: name.trim(),
     nameLower: name.trim().toLowerCase(),
     tag: seedTag,
+    exploits: [],
     notes: [],
     venues: {},
     sessions: 0,
@@ -97,6 +99,18 @@ export async function addPlayerNote(id: number, text: string): Promise<void> {
   await db.players.update(id, { notes });
 }
 
+export async function cyclePlayerExploit(id: number, axisId: string): Promise<void> {
+  const p = await db.players.get(id);
+  if (!p) return;
+  await db.players.update(id, { exploits: cycleExploit(p.exploits ?? [], axisId) });
+}
+
+export async function confirmPlayerExploit(id: number, axisId: string): Promise<void> {
+  const p = await db.players.get(id);
+  if (!p) return;
+  await db.players.update(id, { exploits: confirmExploit(p.exploits ?? [], axisId) });
+}
+
 export async function deletePlayer(id: number): Promise<void> {
   await db.players.delete(id);
 }
@@ -123,6 +137,7 @@ export async function createNoNamePlayers(count: number): Promise<Player[]> {
         name,
         nameLower: name.toLowerCase(),
         tag: '',
+        exploits: [],
         notes: [],
         venues: {},
         sessions: 0,
