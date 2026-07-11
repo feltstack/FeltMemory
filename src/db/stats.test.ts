@@ -3,8 +3,13 @@ import {
   actingOrder,
   assignPositions,
   computeHandDeltas,
+  dealerXY,
   nextButtonSeat,
   raiseCount,
+  reindexSeats,
+  removeSeatAt,
+  reorderSeats,
+  seatAngle,
   seatXY,
 } from './stats';
 import type { HandEntry, Seat } from '../types';
@@ -81,7 +86,7 @@ describe('positions & rotation', () => {
   it('keeps seat layout inside the felt bounds', () => {
     for (let n = 2; n <= 11; n++) {
       for (let s = 1; s <= n; s++) {
-        const [x, y] = seatXY(s, n);
+        const [x, y] = seatXY(s, 1, n);
         expect(x).toBeGreaterThanOrEqual(0);
         expect(x).toBeLessThanOrEqual(100);
         expect(y).toBeGreaterThanOrEqual(0);
@@ -169,5 +174,111 @@ describe('computeHandDeltas', () => {
     expect(raiseCount([])).toBe(0);
     expect(raiseCount([entry(4, 104, 'raise', 1, 1)])).toBe(1);
     expect(raiseCount([entry(4, 104, 'raise', 1, 1), entry(8, 107, 'raise', 2, 2)])).toBe(2);
+  });
+});
+
+describe('seat layout (Hero pinned bottom, dealer beside seat 1)', () => {
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+
+  it('puts Hero at bottom-center whatever seat Hero is in', () => {
+    for (const [hero, n] of [[1, 8], [5, 9], [3, 6], [10, 10]] as const) {
+      const [x, y] = seatXY(hero, hero, n);
+      expect(near(x, 50)).toBe(true); // horizontally centered
+      expect(y).toBeGreaterThan(50); // bottom half
+    }
+  });
+
+  it('matches Connor case: Hero seat 1 (8 seats) → dealer middle-right, seat 8 to its right', () => {
+    expect(near(seatAngle(1, 1, 8), 180)).toBe(true); // Hero bottom
+    expect(near(seatAngle(0 + 0, 1, 8), 0)).toBe(false); // sanity
+    // dealer sits clockwise before seat 1 (lower-right); seat 8 further clockwise-before (upper-right)
+    const [dx, dy] = dealerXY(1, 8);
+    expect(dx).toBeGreaterThan(50); // right of center
+    expect(dy).toBeGreaterThan(50); // lower half → "middle right"
+    const [s8x] = seatXY(8, 1, 8);
+    expect(s8x).toBeGreaterThan(50); // seat 8 on the right, to the dealer's right
+  });
+
+  it('numbers seats clockwise: seat k+1 is clockwise of seat k', () => {
+    // Clockwise = increasing screen angle. seat1=180, seat2 should be ~220.
+    expect(near(seatAngle(2, 1, 8), 220)).toBe(true);
+  });
+
+  it('keeps every seat and the dealer inside the felt', () => {
+    for (let n = 2; n <= 11; n++) {
+      for (let hero = 1; hero <= n; hero++) {
+        for (let s = 1; s <= n; s++) {
+          const [x, y] = seatXY(s, hero, n);
+          expect(x).toBeGreaterThanOrEqual(0);
+          expect(x).toBeLessThanOrEqual(100);
+          expect(y).toBeGreaterThanOrEqual(0);
+          expect(y).toBeLessThanOrEqual(100);
+        }
+        const [dxx, dyy] = dealerXY(hero, n);
+        expect(dxx).toBeGreaterThanOrEqual(0);
+        expect(dxx).toBeLessThanOrEqual(100);
+        expect(dyy).toBeGreaterThanOrEqual(0);
+        expect(dyy).toBeLessThanOrEqual(100);
+      }
+    }
+  });
+});
+
+
+describe('seat edit helpers (reorder / remove + renumber)', () => {
+  const mk = (nos: number[]) =>
+    nos.map((n) => ({ seatNo: n, playerId: n === 2 ? null : 100 + n, hero: n === 2, open: false, stack: '', pos: '', dealer: false }));
+
+  it('reorderSeats moves a seat and reindexSeats renumbers 1..n', () => {
+    const seats = mk([1, 2, 3, 4]);
+    // move seat 4 to where seat 1 is → order becomes [4,1,2,3]
+    const out = reindexSeats(reorderSeats(seats, 4, 1));
+    expect(out.map((s) => s.seatNo)).toEqual([1, 2, 3, 4]);
+    expect(out.map((s) => s.playerId)).toEqual([104, 101, null, 103]);
+  });
+
+  it('reorder preserves the hero flag on the moved-around player', () => {
+    const seats = mk([1, 2, 3, 4]); // hero is the seat-2 player (playerId null)
+    const out = reindexSeats(reorderSeats(seats, 2, 4));
+    const heroSeat = out.find((s) => s.hero);
+    expect(heroSeat?.seatNo).toBe(4);
+  });
+
+  it('removeSeatAt drops a seat and renumbers the rest', () => {
+    const seats = mk([1, 2, 3, 4, 5]);
+    const out = reindexSeats(removeSeatAt(seats, 3));
+    expect(out.map((s) => s.seatNo)).toEqual([1, 2, 3, 4]);
+    expect(out.map((s) => s.playerId)).toEqual([101, null, 104, 105]);
+    expect(out.length).toBe(4);
+  });
+});
+
+
+describe('sitting out (skipped by positions, rotation, dealt-counts)', () => {
+  const seat = (n: number, opts: Partial<Seat> = {}): Seat => ({
+    seatNo: n, playerId: 100 + n, hero: false, open: false, stack: '', pos: '', dealer: false, ...opts,
+  });
+
+  it('assignPositions skips a sitting-out seat', () => {
+    const seats = [seat(1), seat(2, { sittingOut: true }), seat(3), seat(4)];
+    const out = assignPositions(seats, 1, false);
+    const pos = Object.fromEntries(out.map((s) => [s.seatNo, s.pos]));
+    expect(pos[2]).toBe(''); // no position while out
+    expect(pos[1]).toBe('BTN');
+    expect(pos[3]).toBe('SB'); // blinds skip the empty chair
+    expect(pos[4]).toBe('BB');
+  });
+
+  it('nextButtonSeat hops over a sitting-out seat', () => {
+    const seats = [seat(1), seat(2, { sittingOut: true }), seat(3)];
+    expect(nextButtonSeat(seats, 1)).toBe(3);
+  });
+
+  it('computeHandDeltas does not deal a sitting-out player', () => {
+    const seats = [seat(1), seat(2, { sittingOut: true }), seat(3)];
+    const d = computeHandDeltas(seats, [], 1, false);
+    expect(d.get(102)).toBeUndefined();
+    expect(d.get(101)?.dealt).toBe(1);
+    expect(d.get(103)?.dealt).toBe(1);
   });
 });

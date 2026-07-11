@@ -1,9 +1,9 @@
 /** Live HUD: session setup → felt/list views, tap logging, blind toggles. */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
-import { pendingBadge, seatXY } from '../db/stats';
+import { dealerXY, pendingBadge, seatXY } from '../db/stats';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from '../components/Icons';
@@ -28,6 +28,7 @@ function useSeatedPlayers(): Map<number, Player> {
 
 export default function HudScreen() {
   const { sessionActive, settings } = useApp();
+  const { editMode } = useUi();
   const [view, setView] = useState<'table' | 'list'>(settings.defaultView);
   const [btnMode, setBtnMode] = useState(false);
   const [wide, setWide] = useState(window.innerWidth >= 900);
@@ -40,27 +41,40 @@ export default function HudScreen() {
 
   if (!sessionActive) return <SessionSetup />;
 
-  const showCompanion = wide && view === 'table';
+  // Editing always shows the list — drag-to-reorder and remove live there.
+  const effectiveView = editMode ? 'list' : view;
+  const showCompanion = wide && effectiveView === 'table' && !editMode;
   return (
     <div className="screen">
-      <div className="segmented" style={{ marginBottom: 14 }}>
-        <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>
-          Table view
-        </button>
-        <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>
-          List view
-        </button>
-      </div>
+      {!editMode && (
+        <div className="segmented" style={{ marginBottom: 14 }}>
+          <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>
+            List view
+          </button>
+          <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>
+            Table view
+          </button>
+        </div>
+      )}
+      {editMode && (
+        <div className="edit-hint">Drag ≡ to reorder · tap − to remove a seat · Done when finished</div>
+      )}
       <UndoBar />
       <div className={showCompanion ? 'hud-grid' : ''}>
-        <div>{view === 'table' ? <Felt btnMode={btnMode} setBtnMode={setBtnMode} /> : <SeatList />}</div>
+        <div>
+          {effectiveView === 'table' ? (
+            <Felt btnMode={btnMode} setBtnMode={setBtnMode} />
+          ) : (
+            <SeatList editing={editMode} />
+          )}
+        </div>
         {showCompanion && (
           <div>
             <SeatList />
           </div>
         )}
       </div>
-      {view === 'table' && (
+      {!editMode && effectiveView === 'table' && (
         <div className="btn-row" style={{ justifyContent: 'center', marginBottom: 8 }}>
           <button
             className={`btn ${btnMode ? 'primary' : ''}`}
@@ -187,6 +201,15 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
   const { openPlayer, openAssign, toast } = useUi();
   const playersById = useSeatedPlayers();
 
+  // Hero is pinned to the bottom-center. The human dealer is a fixed marker
+  // between the highest seat and seat 1 (seat 1 to its screen-left). Where it
+  // lands depends only on which seat Hero occupies.
+  const n = live.seats.length;
+  const heroSeat = live.seats.find((s) => s.hero)?.seatNo ?? 1;
+  const posOf = (seatNo: number): [number, number] => seatXY(seatNo, heroSeat, n);
+  const [dealerX, dealerY] = dealerXY(heroSeat, n);
+  const compactDealer = n >= 10;
+
   const tapSeat = (s: Seat, e: React.MouseEvent) => {
     if (btnMode) {
       if (s.open) {
@@ -211,9 +234,12 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
   return (
     <div className="felt-wrap">
       <div className="felt" />
-      <div className="dealer-gap">
+      <div
+        className={`dealer-gap${compactDealer ? ' compact' : ''}`}
+        style={{ left: `${dealerX}%`, top: `${dealerY}%` }}
+        title="Dealer (house)"
+      >
         <Icon name="cards" />
-        DEALER
       </div>
       <div className="felt-center">
         <div className="stakes">{live.stakes}</div>
@@ -222,7 +248,7 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
         </div>
       </div>
       {live.seats.map((s) => {
-        const [x, y] = seatXY(s.seatNo, live.seats.length);
+        const [x, y] = posOf(s.seatNo);
         if (s.open) {
           return (
             <div
@@ -244,7 +270,7 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
         return (
           <div key={s.seatNo}>
             <div
-              className={`seat-chip ${s.hero ? 'hero' : ''} ${btnMode ? 'btn-target' : ''}`}
+              className={`seat-chip ${s.hero ? 'hero' : ''} ${btnMode ? 'btn-target' : ''} ${s.sittingOut ? 'sitting-out' : ''}`}
               style={{ left: `${x}%`, top: `${y}%`, ...(ring && !s.hero ? { borderColor: ring } : {}) }}
               onClick={(e) => tapSeat(s, e)}
             >
@@ -255,11 +281,20 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
               {hasNote && !badge && <div className="note-dot">📝</div>}
               {s.stack && <div className="stack-tag">${s.stack}</div>}
             </div>
-            {s.dealer && (
-              <div className="dealer-btn" style={{ left: `${x + 7}%`, top: `${y - 9}%` }}>
-                D
-              </div>
-            )}
+            {s.dealer &&
+              (() => {
+                const dx = x - 50,
+                  dy = y - 50;
+                const len = Math.hypot(dx, dy) || 1;
+                return (
+                  <div
+                    className="dealer-btn"
+                    style={{ left: `${x + (dx / len) * 8}%`, top: `${y + (dy / len) * 8}%` }}
+                  >
+                    D
+                  </div>
+                );
+              })()}
           </div>
         );
       })}
@@ -269,7 +304,7 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
 
 /* ================= seat list ================= */
 
-function SeatList() {
+function SeatList({ editing = false }: { editing?: boolean }) {
   const { live, dispatch, settings } = useApp();
   const { openPlayer, openAssign, toast } = useUi();
   const playersById = useSeatedPlayers();
@@ -277,6 +312,76 @@ function SeatList() {
   // no popup, autofocused, Enter saves, Esc closes.
   const [noteSeat, setNoteSeat] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+
+  // Drag-to-reorder (pointer events → works on touch and mouse).
+  const [dragSeat, setDragSeat] = useState<number | null>(null);
+  const [overSeat, setOverSeat] = useState<number | null>(null);
+  const rowRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const setRowRef = (seatNo: number) => (el: HTMLDivElement | null) => {
+    if (el) rowRefs.current.set(seatNo, el);
+    else rowRefs.current.delete(seatNo);
+  };
+  const rowClass = (seatNo: number, base: string) =>
+    `${base}${dragSeat === seatNo ? ' dragging' : ''}` +
+    `${overSeat === seatNo && dragSeat != null && dragSeat !== seatNo ? ' drag-over' : ''}`;
+  const onHandleDown = (seatNo: number) => (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    setDragSeat(seatNo);
+    setOverSeat(seatNo);
+  };
+  const onHandleMove = (e: React.PointerEvent) => {
+    if (dragSeat == null) return;
+    let target = dragSeat;
+    for (const [sn, el] of rowRefs.current) {
+      const r = el.getBoundingClientRect();
+      if (e.clientY >= r.top && e.clientY <= r.bottom) {
+        target = sn;
+        break;
+      }
+    }
+    setOverSeat(target);
+  };
+  const onHandleUp = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    if (dragSeat != null && overSeat != null && dragSeat !== overSeat) {
+      dispatch({ type: 'MOVE_SEAT', from: dragSeat, to: overSeat });
+    }
+    setDragSeat(null);
+    setOverSeat(null);
+  };
+  const removeSeat = (seatNo: number, hero: boolean) => {
+    if (hero) return toast("That's your seat — move yourself first, then remove it");
+    if (live.seats.length <= 2) return toast('Keep at least 2 seats');
+    dispatch({ type: 'REMOVE_SEAT', seatNo });
+  };
+  const RmBtn = ({ seatNo, hero }: { seatNo: number; hero: boolean }) =>
+    editing ? (
+      <button
+        className="rm-seat"
+        title="Remove this seat"
+        onClick={(e) => {
+          e.stopPropagation();
+          removeSeat(seatNo, hero);
+        }}
+      >
+        −
+      </button>
+    ) : null;
+  const Handle = ({ seatNo }: { seatNo: number }) =>
+    editing ? (
+      <div
+        className="drag-handle"
+        title="Drag to reorder"
+        onPointerDown={onHandleDown(seatNo)}
+        onPointerMove={onHandleMove}
+        onPointerUp={onHandleUp}
+        onClick={(e) => e.stopPropagation()}
+      >
+        ≡
+      </div>
+    ) : null;
 
   const saveQuickNote = (playerId: number, name: string) => {
     const text = noteDraft.trim();
@@ -291,11 +396,24 @@ function SeatList() {
   };
 
   return (
-    <div>
+    <div className={editing ? 'seat-list editing' : 'seat-list'}>
+      <div className="seat-list-head">
+        <div className="stat-quad">
+          <div className="sh">VPIP</div>
+          <div className="sh">PFR</div>
+          <div className="sh">3B</div>
+          <div className="sh">Hands</div>
+        </div>
+      </div>
       {live.seats.map((s) => {
         if (s.open) {
           return (
-            <div className="seat-row open" key={s.seatNo}>
+            <div
+              className={rowClass(s.seatNo, 'seat-row open')}
+              key={s.seatNo}
+              ref={setRowRef(s.seatNo)}
+            >
+              <RmBtn seatNo={s.seatNo} hero={false} />
               <div className="badge">{s.seatNo}</div>
               <div className="row-main">
                 <div className="row-name">Open Seat</div>
@@ -313,6 +431,7 @@ function SeatList() {
               >
                 Sit here
               </button>
+              <Handle seatNo={s.seatNo} />
             </div>
           );
         }
@@ -324,15 +443,22 @@ function SeatList() {
         return (
           <div key={s.seatNo}>
           <div
-            className="seat-row"
+            className={rowClass(s.seatNo, s.sittingOut ? 'seat-row sitting-out' : 'seat-row')}
+            ref={setRowRef(s.seatNo)}
             onClick={(e) => {
               if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
               else if (s.playerId != null) openPlayer(s.playerId, s.seatNo, anchorOf(e));
             }}
           >
+            <RmBtn seatNo={s.seatNo} hero={s.hero} />
             <div
               className={`badge ${s.hero ? 'hero' : ''}`}
               style={ring && !s.hero ? { borderColor: ring } : undefined}
+              title={s.sittingOut ? 'Tap to sit back in' : 'Tap to sit this player out'}
+              onClick={(e) => {
+                e.stopPropagation();
+                dispatch({ type: 'TOGGLE_SITOUT', seatNo: s.seatNo });
+              }}
             >
               {s.seatNo}
             </div>
@@ -344,28 +470,36 @@ function SeatList() {
                     ? ` — ${notePreview.slice(0, 18)}${notePreview.length > 18 ? '…' : ''}`
                     : ''}
                 </div>
+                {s.sittingOut ? (
+                  <span className="pos-chip out">OUT</span>
+                ) : (
+                  s.pos && (
+                    <span
+                      className={`pos-chip clickable${s.dealer ? ' btn' : ''}`}
+                      title="Set this seat as the button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
+                      }}
+                    >
+                      {s.pos}
+                    </span>
+                  )
+                )}
                 {badge && <span className="pending-chip">{badge}</span>}
                 {s.stack && <span className="row-stack">${s.stack}</span>}
               </div>
               <div className="stat-quad">
-                <div>
-                  VPIP <b>{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</b>
-                </div>
-                <div>
-                  PFR <b>{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</b>
-                </div>
-                <div>
-                  3B <b>{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</b>
-                </div>
-                <div>
-                  Hands <b>{s.hero ? '–' : c?.dealt ?? 0}</b>
-                </div>
+                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</div>
+                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</div>
+                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</div>
+                <div className="stat-cell">{s.hero ? '–' : c?.dealt ?? 0}</div>
               </div>
             </div>
-            <div className="row-pos">{s.dealer ? <span title="Button">🔘</span> : s.pos}</div>
             <div className="row-actions">
               <button
                 className={`mini-btn enabled ${badge && badge !== 'Open' && !badge.includes('Bet') ? 'tapped' : ''}`}
+                disabled={s.sittingOut}
                 onClick={(e) => {
                   e.stopPropagation();
                   dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
@@ -375,6 +509,7 @@ function SeatList() {
               </button>
               <button
                 className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
+                disabled={s.sittingOut}
                 onClick={(e) => {
                   e.stopPropagation();
                   dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
@@ -396,7 +531,7 @@ function SeatList() {
                 </button>
               )}
             </div>
-            <Icon name="chevron" className="icon chevron" style={{ width: 16, height: 16 }} />
+            <Handle seatNo={s.seatNo} />
           </div>
           {noteSeat === s.seatNo && s.playerId != null && (
             <div className="quick-note">

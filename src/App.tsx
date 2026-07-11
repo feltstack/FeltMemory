@@ -76,7 +76,7 @@ function SessionMeta() {
 
 export default function App() {
   const { ready, sessionActive, saveHand, live } = useApp();
-  const { toast, toastMsg, toastShow, openMenu } = useUi();
+  const { toast, toastMsg, toastShow, openMenu, editMode, toggleEdit } = useUi();
   const [screen, setScreen] = useState<ScreenKey>('hud');
 
   if (!ready) return null;
@@ -118,6 +118,15 @@ export default function App() {
               {screen === 'hud' && sessionActive && (
                 <button className="icon-btn" title="Table menu" onClick={openMenu}>
                   ⋯
+                </button>
+              )}
+              {screen === 'hud' && sessionActive && (
+                <button
+                  className={`edit-btn ${editMode ? 'active' : ''}`}
+                  title="Edit seats — drag to reorder, remove seats"
+                  onClick={toggleEdit}
+                >
+                  {editMode ? 'Done' : 'Edit'}
                 </button>
               )}
             </div>

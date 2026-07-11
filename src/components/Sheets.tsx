@@ -185,7 +185,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
         {notes.map((n, i) => (
           <div className="note-item" key={i}>
             {n.text}
-            <div className="ts">{n.t}</div>
+            <div className="ts">{n.t}{n.h != null ? ` · Hand #${n.h}` : ''}</div>
           </div>
         ))}
       </div>

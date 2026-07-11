@@ -90,7 +90,10 @@ export async function toggleVerified(id: number): Promise<void> {
 export async function addPlayerNote(id: number, text: string): Promise<void> {
   const p = await db.players.get(id);
   if (!p) return;
-  const notes: Note[] = [...(p.notes || []), { t: nowStamp(), text }];
+  // Tag the note with the hand # of THIS villain's sample (observed hands + the
+  // one in progress) — shown on the note's date line, not mixed into the text.
+  const h = (p.counters?.dealt ?? 0) + 1;
+  const notes: Note[] = [...(p.notes || []), { t: nowStamp(), text, h }];
   await db.players.update(id, { notes });
 }
 

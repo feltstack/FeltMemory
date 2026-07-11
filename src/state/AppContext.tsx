@@ -18,6 +18,9 @@ import {
   callLabel,
   nextButtonSeat,
   raiseCount,
+  reindexSeats,
+  removeSeatAt,
+  reorderSeats,
 } from '../db/stats';
 import * as repo from '../db/repo';
 import {
@@ -76,6 +79,9 @@ type Action =
   | { type: 'ASSIGN_SEATS_BULK'; assignments: { seatNo: number; playerId: number }[] }
   | { type: 'UNSEAT'; seatNo: number }
   | { type: 'UNSEAT_VILLAINS' }
+  | { type: 'REMOVE_SEAT'; seatNo: number }
+  | { type: 'MOVE_SEAT'; from: number; to: number }
+  | { type: 'TOGGLE_SITOUT'; seatNo: number }
   | { type: 'MOVE_HERO'; seatNo: number }
   | { type: 'SET_STACK'; seatNo: number; stack: string }
   | { type: 'SET_BTN'; seatNo: number }
@@ -150,6 +156,56 @@ function reducer(live: LiveState, a: Action): LiveState {
       const btnSeat = seats.some((s) => s.seatNo === live.btnSeat && !s.open)
         ? live.btnSeat
         : nextButtonSeat(seats, live.btnSeat);
+      return withPositions({ ...live, seats, currentEntries, btnSeat });
+    }
+    case 'REMOVE_SEAT': {
+      const target = live.seats.find((s) => s.seatNo === a.seatNo);
+      if (!target || target.hero || live.seats.length <= 2) return live;
+      const remaining = removeSeatAt(live.seats, a.seatNo);
+      const btnIdx = remaining.findIndex((s) => s.seatNo === live.btnSeat);
+      const seats = reindexSeats(remaining);
+      const heroSeat = seats.find((s) => s.hero)?.seatNo ?? 1;
+      let btnSeat = btnIdx >= 0 ? btnIdx + 1 : seats.find((s) => !s.open)?.seatNo ?? 1;
+      if (!seats.some((s) => s.seatNo === btnSeat && !s.open)) {
+        btnSeat = nextButtonSeat(seats, btnSeat);
+      }
+      return withPositions({
+        ...live,
+        tableSize: seats.length,
+        seats,
+        heroSeat,
+        btnSeat,
+        currentEntries: [],
+      });
+    }
+    case 'MOVE_SEAT': {
+      if (a.from === a.to) return live;
+      const reordered = reorderSeats(live.seats, a.from, a.to);
+      const btnIdx = reordered.findIndex((s) => s.seatNo === live.btnSeat);
+      const seats = reindexSeats(reordered);
+      const heroSeat = seats.find((s) => s.hero)?.seatNo ?? live.heroSeat;
+      let btnSeat = btnIdx >= 0 ? btnIdx + 1 : live.btnSeat;
+      if (!seats.some((s) => s.seatNo === btnSeat && !s.open)) {
+        btnSeat = nextButtonSeat(seats, btnSeat);
+      }
+      return withPositions({ ...live, seats, heroSeat, btnSeat, currentEntries: [] });
+    }
+    case 'TOGGLE_SITOUT': {
+      const target = live.seats.find((s) => s.seatNo === a.seatNo);
+      if (!target || target.open) return live; // only occupied seats sit out
+      const sittingOut = !target.sittingOut;
+      const seats = live.seats.map((s) =>
+        s.seatNo === a.seatNo ? { ...s, sittingOut } : s,
+      );
+      // A player going out drops their pending taps this hand.
+      const currentEntries = sittingOut
+        ? live.currentEntries.filter((e) => e.seatNo !== a.seatNo)
+        : live.currentEntries;
+      // Never leave the button on someone who just sat out.
+      let btnSeat = live.btnSeat;
+      if (!seats.some((s) => s.seatNo === btnSeat && !s.open && !s.sittingOut)) {
+        btnSeat = nextButtonSeat(seats, btnSeat);
+      }
       return withPositions({ ...live, seats, currentEntries, btnSeat });
     }
     case 'MOVE_HERO': {

@@ -26,6 +26,9 @@ interface UiCtx {
   toast: (msg: string) => void;
   toastMsg: string;
   toastShow: boolean;
+  editMode: boolean;
+  toggleEdit: () => void;
+  setEditMode: (v: boolean) => void;
   sheet: SheetState;
   openPlayer: (playerId: number, seatNo?: number, anchor?: SheetAnchor) => void;
   openAssign: (seatNo: number) => void;
@@ -39,6 +42,8 @@ export function UiProvider({ children }: { children: ReactNode }) {
   const [toastMsg, setToastMsg] = useState('');
   const [toastShow, setToastShow] = useState(false);
   const [sheet, setSheet] = useState<SheetState>(null);
+  const [editMode, setEditMode] = useState(false);
+  const toggleEdit = useCallback(() => setEditMode((v) => !v), []);
   const timer = useRef<number | undefined>(undefined);
 
   const toast = useCallback((msg: string) => {
@@ -62,7 +67,7 @@ export function UiProvider({ children }: { children: ReactNode }) {
 
   return (
     <Ctx.Provider
-      value={{ toast, toastMsg, toastShow, sheet, openPlayer, openAssign, openMenu, closeSheet }}
+      value={{ toast, toastMsg, toastShow, editMode, toggleEdit, setEditMode, sheet, openPlayer, openAssign, openMenu, closeSheet }}
     >
       {children}
     </Ctx.Provider>

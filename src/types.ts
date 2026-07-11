@@ -6,6 +6,7 @@ export const DEFAULT_TAGS = ['TAG', 'LAG', 'Loose Passive', 'Tight Passive'];
 export interface Note {
   t: string; // "YYYY-MM-DD HH:mm"
   text: string;
+  h?: number; // hand # of THIS villain's sample when the note was taken
 }
 
 /**
@@ -107,6 +108,7 @@ export interface Seat {
   stack: string; // free text, e.g. "450"
   pos: string;
   dealer: boolean;
+  sittingOut?: boolean; // grayed, no position, skipped by rotation & dealt-counts
 }
 
 /** Ephemeral-but-persisted live table state (survives refresh mid-session). */

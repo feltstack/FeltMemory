@@ -19,23 +19,78 @@
 
 import type { HandEntry, Seat, StatCounters } from '../types';
 
-/* ---------------- seat layout (carried from approved mockup) ---------------- */
+/* ---------------- seat layout ---------------- */
 
 /**
- * Stadium table, vertical, dealer cutout top-center. Seat 1 immediately left
- * of the dealer, highest seat immediately right; the rest wrap the long way.
- * Returns [x%, y%] for a seat chip.
+ * Table geometry. Hero always sits at the bottom-center of the felt. The human
+ * dealer is a FIXED reference — a non-player marker between the highest seat and
+ * seat 1: seat 1 immediately to the dealer's (screen) left, the highest seat
+ * immediately to its right, seat numbers increasing CLOCKWISE (standard casino
+ * convention). The whole layout is a rigid ring rotated so Hero lands at the
+ * bottom — nothing is mirrored, so "the player two seats to my left" is always
+ * really on the left.
+ *
+ * Ring has one slot per seat plus one for the dealer (n + 1 slots). Clockwise
+ * order is DEALER, seat 1, seat 2, …, seat n; slot index == seat number, dealer
+ * == slot 0. We rotate so Hero (heroSeat) sits at 180° (bottom-center).
  */
-export function seatXY(seatNum: number, n: number): [number, number] {
-  const gapDeg = 20;
-  const spacing = n > 1 ? (360 - gapDeg) / (n - 1) : 0;
-  const angleDeg = -(gapDeg / 2) - (seatNum - 1) * spacing;
+const RING_R = 40;
+
+function slotAngleDeg(slot: number, heroSeat: number, n: number): number {
+  const step = 360 / (n + 1);
+  return slot * step + (180 - heroSeat * step);
+}
+
+function angleToXY(angleDeg: number, r = RING_R): [number, number] {
   const rad = (angleDeg * Math.PI) / 180;
-  const rx = 41,
-    ry = 41,
-    cx = 50,
-    cy = 50;
-  return [cx + rx * Math.sin(rad), cy - ry * Math.cos(rad)];
+  return [50 + r * Math.sin(rad), 50 - r * Math.cos(rad)];
+}
+
+/** [x%, y%] for a seat chip, given which seat Hero occupies (Hero pinned bottom). */
+export function seatXY(seatNo: number, heroSeat: number, n: number): [number, number] {
+  return angleToXY(slotAngleDeg(seatNo, heroSeat, n));
+}
+
+/** [x%, y%] for the fixed human-dealer marker (ring slot 0, between seat n and seat 1). */
+export function dealerXY(heroSeat: number, n: number, r = RING_R): [number, number] {
+  return angleToXY(slotAngleDeg(0, heroSeat, n), r);
+}
+
+/** Normalized [0,360) screen angle of a seat (0=top, 90=right, 180=bottom). Test helper. */
+export function seatAngle(seatNo: number, heroSeat: number, n: number): number {
+  return ((slotAngleDeg(seatNo, heroSeat, n) % 360) + 360) % 360;
+}
+
+/* ---- seat edit mode (reorder / remove with auto-renumber) ---- */
+
+/** Seats sorted by seatNo (ascending). */
+function bySeatNo(seats: Seat[]): Seat[] {
+  return [...seats].sort((a, b) => a.seatNo - b.seatNo);
+}
+
+/**
+ * Reorder occupants: pull the seat at `fromSeat` and re-insert it at the slot
+ * currently holding `toSeat` (insert-shift). Returns the ORIGINAL seat objects
+ * in their new order (seatNo NOT yet renumbered — call reindexSeats).
+ */
+export function reorderSeats(seats: Seat[], fromSeat: number, toSeat: number): Seat[] {
+  const arr = bySeatNo(seats);
+  const fi = arr.findIndex((s) => s.seatNo === fromSeat);
+  const ti = arr.findIndex((s) => s.seatNo === toSeat);
+  if (fi < 0 || ti < 0) return arr;
+  const [moved] = arr.splice(fi, 1);
+  arr.splice(ti, 0, moved);
+  return arr;
+}
+
+/** Drop a seat; returns remaining ORIGINAL objects in order (not yet renumbered). */
+export function removeSeatAt(seats: Seat[], seatNo: number): Seat[] {
+  return bySeatNo(seats).filter((s) => s.seatNo !== seatNo);
+}
+
+/** Renumber seatNo = position (1-based), preserving array order. */
+export function reindexSeats(seats: Seat[]): Seat[] {
+  return seats.map((s, i) => ({ ...s, seatNo: i + 1 }));
 }
 
 /** Seats in clockwise rotation order starting from (and including) fromSeat. */
@@ -67,7 +122,7 @@ export function assignPositions(
   noSB: boolean,
 ): Seat[] {
   const out = seats.map((s) => ({ ...s, pos: '', dealer: false }));
-  const occupied = out.filter((s) => !s.open);
+  const occupied = out.filter((s) => !s.open && !s.sittingOut);
   if (occupied.length < 2) {
     const btn = occupied.find((s) => s.seatNo === btnSeat) ?? occupied[0];
     if (btn) {
@@ -99,7 +154,7 @@ export function assignPositions(
 
 /** Next occupied seat clockwise from current button (skips open seats). */
 export function nextButtonSeat(seats: Seat[], btnSeat: number): number {
-  const occupied = seats.filter((s) => !s.open);
+  const occupied = seats.filter((s) => !s.open && !s.sittingOut);
   if (occupied.length === 0) return btnSeat;
   const rot = rotationFrom(occupied, btnSeat);
   const cur = rot.findIndex((s) => s.seatNo === btnSeat);
@@ -115,7 +170,7 @@ export function actingOrder(
   btnSeat: number,
   noSB: boolean,
 ): number[] {
-  const occupied = seats.filter((s) => !s.open);
+  const occupied = seats.filter((s) => !s.open && !s.sittingOut);
   const rot = rotationFrom(occupied, btnSeat).map((s) => s.seatNo);
   if (rot.length <= 2) return rot; // HU: BTN acts first preflop
   const blinds = noSB ? 2 : 3; // BTN(+SB)+BB at the head of rotation
@@ -161,7 +216,8 @@ export function computeHandDeltas(
 
   // Everyone seated (non-open, non-hero) was dealt in.
   for (const s of seats) {
-    if (!s.open && !s.hero && s.playerId != null) get(s.playerId).dealt = 1;
+    if (!s.open && !s.sittingOut && !s.hero && s.playerId != null)
+      get(s.playerId).dealt = 1;
   }
 
   const ordered = [...entries].sort((a, b) => a.order - b.order);
