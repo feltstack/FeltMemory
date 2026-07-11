@@ -5,7 +5,7 @@ import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, seatXY } from '../db/stats';
 import { exploitLabel, topExploits } from '../db/exploits';
-import { toggleDeleteConfirm } from '../db/notes';
+import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
 import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
@@ -395,7 +395,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
       setNoteSeat(null);
       return;
     }
-    void repo.addPlayerNote(playerId, text);
+    void repo.addPlayerNote(playerId, text, live.handNo);
     toast(`Note saved on ${name}`);
     setNoteDraft('');
     setNoteSeat(null);
@@ -454,7 +454,8 @@ function SeatList({ editing = false }: { editing?: boolean }) {
         const c = p?.counters;
         const ring = p?.tag ? tagColor(p.tag, settings.tags) : undefined;
         const badge = pendingBadge(live.currentEntries, s.seatNo);
-        const notePreview = p?.notes?.length ? p.notes[p.notes.length - 1].text : '';
+        const pinnedNote = p?.notes?.find((n) => n.pinned);
+        const notePreview = pinnedNote?.text ?? (p?.notes?.length ? p.notes[p.notes.length - 1].text : '');
         return (
           <div key={s.seatNo}>
           <div
@@ -478,7 +479,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
               {s.seatNo}
             </div>
             <div className="row-body">
-              <div className="row-name-line">
+              <div className={`row-name-line${pinnedNote ? ' has-pin' : ''}`}>
                 <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
                 {!s.hero &&
                   topExploits(p?.exploits ?? [], 2).map((e) => (
@@ -487,7 +488,12 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                       {e.confirmations ? `×${e.confirmations}` : ''}
                     </span>
                   ))}
-                {!s.hero && notePreview && <span className="row-note">— {notePreview}</span>}
+                {!s.hero && notePreview && (
+                  <span className={`row-note${pinnedNote ? ' pinned' : ''}`}>
+                    {pinnedNote ? '📌 ' : '— '}
+                    {notePreview}
+                  </span>
+                )}
                 {badge && <span className="pending-chip">{badge}</span>}
                 {s.stack && <span className="row-stack">${s.stack}</span>}
               </div>
@@ -632,7 +638,7 @@ function PlayerCards() {
   const saveNote = (pid: number, name: string) => {
     const text = (drafts[pid] ?? '').trim();
     if (!text) return;
-    void repo.addPlayerNote(pid, text);
+    void repo.addPlayerNote(pid, text, live.handNo);
     setDraft(pid, '');
     toast(`Note saved on ${name}`);
   };
@@ -649,7 +655,6 @@ function PlayerCards() {
             const p = playersById.get(s.playerId!);
             if (!p) return null;
             const color = p.tag ? tagColor(p.tag, settings.tags) : undefined;
-            const recent = [...p.notes].slice(-3).reverse();
             return (
               <div className="pcard" key={s.seatNo} id={`pcard-${s.seatNo}`}>
                 <div className="pcard-head">
@@ -671,41 +676,63 @@ function PlayerCards() {
                     <Switch on={p.verified} onToggle={() => void repo.toggleVerified(p.id!)} />
                   </div>
                 )}
-                <ExploitChips playerId={p.id!} exploits={p.exploits ?? []} axes={settings.exploitAxes} />
+                <ExploitChips playerId={p.id!} exploits={p.exploits ?? []} axes={settings.exploitAxes} handNo={live.handNo} />
                 <div className="pcard-notes">
-                  {recent.length === 0 && <div className="pcard-nonote">No notes yet</div>}
-                  {recent.map((n, i) => {
-                    const orig = p.notes.length - 1 - i;
+                  {p.notes.length === 0 && <div className="pcard-nonote">No notes yet</div>}
+                  {orderedNotes(p.notes).slice(0, 3).map(({ note: n, index: orig }) => {
                     const key = `${p.id}:${orig}`;
                     const armed = confirmDel === key;
                     return (
                       <div
-                        className={`pcard-note ${armed ? 'confirm-del' : ''}`}
-                        key={i}
+                        className={`pcard-note ${n.pinned ? 'pinned' : ''} ${armed ? 'confirm-del' : ''}`}
+                        key={orig}
                         onClick={() => armed && setConfirmDel(null)}
                       >
                         <div className="pcard-note-body">
-                          <div className="pcard-note-text">{n.text}</div>
-                          <div className="ts">
-                            {n.t}
-                            {n.h != null ? ` · Hand #${n.h}` : ''}
+                          <div className="pcard-note-text">
+                            {n.pinned && <span className="pin-flag">📌</span>}
+                            {n.text}
+                          </div>
+                          <div className="note-meta">
+                            <span className="ts">
+                              {n.t}
+                              {n.h != null ? ` · Hand #${n.h}` : ''}
+                            </span>
+                            {n.exploits?.map((x, k) => (
+                              <span key={k} className={`note-ex lvl${x.level}`}>
+                                {exploitLabel(x, settings.exploitAxes)}
+                              </span>
+                            ))}
                           </div>
                         </div>
-                        <button
-                          className={`note-del ${armed ? 'confirm' : ''}`}
-                          title={armed ? 'Tap again to delete' : 'Delete note'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const r = toggleDeleteConfirm(confirmDel, key);
-                            if (r.doDelete) {
-                              void repo.deletePlayerNote(p.id!, orig);
-                              toast('Note deleted');
-                              setConfirmDel(null);
-                            } else setConfirmDel(r.confirm);
-                          }}
-                        >
-                          {armed ? 'Delete?' : '✕'}
-                        </button>
+                        <div className="note-actions">
+                          <button
+                            className={`note-pin ${n.pinned ? 'on' : ''}`}
+                            title={n.pinned ? 'Unpin' : 'Pin (one per player)'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void repo.togglePinnedNote(p.id!, orig);
+                              toast(n.pinned ? 'Unpinned' : 'Pinned');
+                            }}
+                          >
+                            📌
+                          </button>
+                          <button
+                            className={`note-del ${armed ? 'confirm' : ''}`}
+                            title={armed ? 'Tap again to delete' : 'Delete note'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const r = toggleDeleteConfirm(confirmDel, key);
+                              if (r.doDelete) {
+                                void repo.deletePlayerNote(p.id!, orig);
+                                toast('Note deleted');
+                                setConfirmDel(null);
+                              } else setConfirmDel(r.confirm);
+                            }}
+                          >
+                            {armed ? 'Delete?' : '✕'}
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

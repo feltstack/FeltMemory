@@ -8,7 +8,8 @@ import { useUi } from '../state/UiContext';
 import { Icon } from './Icons';
 import { StatBox, Switch, TagChip, initialsOf } from './Bits';
 import { ExploitChips } from './ExploitChips';
-import { toggleDeleteConfirm } from '../db/notes';
+import { toggleDeleteConfirm, orderedNotes } from '../db/notes';
+import { exploitLabel } from '../db/exploits';
 import { fmt, pct, tagColor, tagSlug, type Player } from '../types';
 
 export function SheetHost() {
@@ -96,7 +97,6 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   };
 
   const venueRows = Object.entries(player.venues || {});
-  const notes = [...(player.notes || [])].reverse();
   const tagInfo = player.tag ? (
     <>
       Tagged <b>{player.tag}</b> after {player.archHand ?? '–'} hands observed
@@ -148,7 +148,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
         </div>
       )}
       <div className="section-title">Exploits</div>
-      <ExploitChips playerId={playerId} exploits={player.exploits ?? []} axes={settings.exploitAxes} />
+      <ExploitChips playerId={playerId} exploits={player.exploits ?? []} axes={settings.exploitAxes} handNo={live.handNo} />
       <div className="stat-grid">
         <StatBox v={fmt(pct(c.vpip, c.dealt))} label="VPIP" />
         <StatBox v={fmt(pct(c.pfr, c.dealt))} label="PFR" />
@@ -182,42 +182,64 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
       </div>
       <div className="section-title">Notes</div>
       <div className="notes-list">
-        {notes.length === 0 && (
+        {(player.notes?.length ?? 0) === 0 && (
           <div className="note-item" style={{ color: 'var(--text-faint)' }}>
             No notes yet
           </div>
         )}
-        {notes.map((n, i) => {
-          const orig = (player.notes?.length ?? 0) - 1 - i;
-          const armed = confirmDel === i;
+        {orderedNotes(player.notes ?? []).map(({ note: n, index: orig }) => {
+          const armed = confirmDel === orig;
           return (
             <div
-              className={`note-item ${armed ? 'confirm-del' : ''}`}
-              key={i}
+              className={`note-item ${n.pinned ? 'pinned' : ''} ${armed ? 'confirm-del' : ''}`}
+              key={orig}
               onClick={() => armed && setConfirmDel(null)}
             >
               <div className="note-item-body">
-                {n.text}
-                <div className="ts">
-                  {n.t}
-                  {n.h != null ? ` · Hand #${n.h}` : ''}
+                <div className="note-text">
+                  {n.pinned && <span className="pin-flag">📌</span>}
+                  {n.text}
+                </div>
+                <div className="note-meta">
+                  <span className="ts">
+                    {n.t}
+                    {n.h != null ? ` · Hand #${n.h}` : ''}
+                  </span>
+                  {n.exploits?.map((x, k) => (
+                    <span key={k} className={`note-ex lvl${x.level}`}>
+                      {exploitLabel(x, settings.exploitAxes)}
+                    </span>
+                  ))}
                 </div>
               </div>
-              <button
-                className={`note-del ${armed ? 'confirm' : ''}`}
-                title={armed ? 'Tap again to delete' : 'Delete note'}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const r = toggleDeleteConfirm(confirmDel, i);
-                  if (r.doDelete) {
-                    void repo.deletePlayerNote(playerId, orig);
-                    toast('Note deleted');
-                    setConfirmDel(null);
-                  } else setConfirmDel(r.confirm);
-                }}
-              >
-                {armed ? 'Delete?' : '✕'}
-              </button>
+              <div className="note-actions">
+                <button
+                  className={`note-pin ${n.pinned ? 'on' : ''}`}
+                  title={n.pinned ? 'Unpin' : 'Pin (one per player)'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void repo.togglePinnedNote(playerId, orig);
+                    toast(n.pinned ? 'Unpinned' : 'Pinned');
+                  }}
+                >
+                  📌
+                </button>
+                <button
+                  className={`note-del ${armed ? 'confirm' : ''}`}
+                  title={armed ? 'Tap again to delete' : 'Delete note'}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const r = toggleDeleteConfirm(confirmDel, orig);
+                    if (r.doDelete) {
+                      void repo.deletePlayerNote(playerId, orig);
+                      toast('Note deleted');
+                      setConfirmDel(null);
+                    } else setConfirmDel(r.confirm);
+                  }}
+                >
+                  {armed ? 'Delete?' : '✕'}
+                </button>
+              </div>
             </div>
           );
         })}
@@ -275,7 +297,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   function addNote() {
     const text = noteDraft.trim();
     if (!text) return;
-    void repo.addPlayerNote(playerId, text);
+    void repo.addPlayerNote(playerId, text, live.handNo);
     setNoteDraft('');
     toast('Note added');
   }

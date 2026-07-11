@@ -8,8 +8,8 @@ import {
   computeHandDeltas,
   nextButtonSeat,
 } from './stats';
-import { confirmExploit, cycleExploit } from './exploits';
-import { removeNoteAt } from './notes';
+import { confirmExploit, cycleExploit, sameHandExploits } from './exploits';
+import { removeNoteAt, togglePin } from './notes';
 import {
   defaultSettings,
   emptyCounters,
@@ -90,20 +90,33 @@ export async function toggleVerified(id: number): Promise<void> {
   });
 }
 
-export async function addPlayerNote(id: number, text: string): Promise<void> {
+export async function addPlayerNote(
+  id: number,
+  text: string,
+  handNo?: number,
+): Promise<void> {
   const p = await db.players.get(id);
   if (!p) return;
   // Tag the note with the hand # of THIS villain's sample (observed hands + the
   // one in progress) — shown on the note's date line, not mixed into the text.
   const h = (p.counters?.dealt ?? 0) + 1;
-  const notes: Note[] = [...(p.notes || []), { t: nowStamp(), text, h }];
-  await db.players.update(id, { notes });
+  const note: Note = { t: nowStamp(), text, h };
+  // Snapshot exploits changed the SAME session hand (frozen — later edits don't rewrite it).
+  if (handNo != null) {
+    const snap = sameHandExploits(p.exploits ?? [], handNo);
+    if (snap.length) note.exploits = snap;
+  }
+  await db.players.update(id, { notes: [...(p.notes || []), note] });
 }
 
-export async function cyclePlayerExploit(id: number, axisId: string): Promise<void> {
+export async function cyclePlayerExploit(
+  id: number,
+  axisId: string,
+  handNo?: number,
+): Promise<void> {
   const p = await db.players.get(id);
   if (!p) return;
-  await db.players.update(id, { exploits: cycleExploit(p.exploits ?? [], axisId) });
+  await db.players.update(id, { exploits: cycleExploit(p.exploits ?? [], axisId, handNo) });
 }
 
 export async function confirmPlayerExploit(id: number, axisId: string): Promise<void> {
@@ -116,6 +129,12 @@ export async function deletePlayerNote(id: number, index: number): Promise<void>
   const p = await db.players.get(id);
   if (!p) return;
   await db.players.update(id, { notes: removeNoteAt(p.notes ?? [], index) });
+}
+
+export async function togglePinnedNote(id: number, index: number): Promise<void> {
+  const p = await db.players.get(id);
+  if (!p) return;
+  await db.players.update(id, { notes: togglePin(p.notes ?? [], index) });
 }
 
 export async function deletePlayer(id: number): Promise<void> {

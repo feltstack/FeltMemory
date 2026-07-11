@@ -455,3 +455,17 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .note-del:hover{ color:var(--red); border-color:var(--red); }
 .note-del.confirm{ background:var(--red); border-color:var(--red); color:#fff; }
 .note-item.confirm-del, .pcard-note.confirm-del{ outline:1px solid var(--red); outline-offset:-1px; }
+
+/* ---------- Pinned notes + exploit-stamped notes ---------- */
+.note-text{ font-size:13px; line-height:1.35; overflow-wrap:anywhere; }
+.pin-flag{ margin-right:4px; }
+.note-meta{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:3px; }
+.note-ex{ font-size:9px; font-weight:800; border-radius:5px; padding:1px 5px; white-space:nowrap; line-height:1.5; }
+.note-ex.lvl1{ color:var(--blue); border:1px solid var(--blue); }
+.note-ex.lvl2{ color:#1a1200; background:var(--accent); border:1px solid var(--accent); }
+.note-actions{ display:flex; align-items:center; gap:5px; flex:none; align-self:center; }
+.note-pin{ flex:none; border:1px solid var(--border); background:var(--surface-2); color:var(--text); border-radius:7px; min-height:26px; padding:0 7px; font-size:12px; cursor:pointer; opacity:.5; filter:grayscale(1); }
+.note-pin.on{ opacity:1; filter:none; border-color:var(--accent); background:rgba(230,130,15,.16); }
+.note-item.pinned, .pcard-note.pinned{ border-left:3px solid var(--accent); }
+.row-name-line.has-pin .row-name{ max-width:42%; }
+.row-note.pinned{ color:var(--text); }

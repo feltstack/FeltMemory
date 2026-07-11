@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeNoteAt, toggleDeleteConfirm } from './notes';
+import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes } from './notes';
 import type { Note } from '../types';
 
 const N = (text: string): Note => ({ t: '2026-07-11 12:00', text });
@@ -32,5 +32,34 @@ describe('two-tap delete confirm', () => {
   it('works with string keys (card pid:index)', () => {
     expect(toggleDeleteConfirm('7:3', '7:3')).toEqual({ confirm: null, doDelete: true });
     expect(toggleDeleteConfirm(null, '7:3')).toEqual({ confirm: '7:3', doDelete: false });
+  });
+});
+
+
+describe('pinned notes (exactly one)', () => {
+  const P = (text: string, pinned = false): Note => ({ t: 't', text, pinned });
+  it('pinning one note unpins any other', () => {
+    let notes = [P('a'), P('b', true), P('c')];
+    notes = togglePin(notes, 2); // pin c → unpins b
+    expect(notes.filter((n) => n.pinned).map((n) => n.text)).toEqual(['c']);
+  });
+  it('never allows two pinned no matter the sequence', () => {
+    let notes = [P('a'), P('b'), P('c')];
+    notes = togglePin(notes, 0);
+    notes = togglePin(notes, 1);
+    notes = togglePin(notes, 2);
+    expect(notes.filter((n) => n.pinned)).toHaveLength(1);
+    expect(notes[2].pinned).toBe(true);
+  });
+  it('tapping the pinned note again unpins it (zero pinned)', () => {
+    let notes = [P('a', true), P('b')];
+    notes = togglePin(notes, 0);
+    expect(notes.filter((n) => n.pinned)).toHaveLength(0);
+  });
+  it('orderedNotes puts the pinned note first, rest newest→oldest, with original indices', () => {
+    const notes = [P('a'), P('b', true), P('c'), P('d')];
+    expect(orderedNotes(notes).map((x) => [x.note.text, x.index])).toEqual([
+      ['b', 1], ['d', 3], ['c', 2], ['a', 0],
+    ]);
   });
 });

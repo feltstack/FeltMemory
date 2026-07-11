@@ -8,6 +8,7 @@ export interface Exploit {
   tag: string;
   level: 1 | 2; // 1 = on, 2 = "!" (extreme)
   confirmations?: number; // showdown-confirmed reads ("×N")
+  lastChangedHand?: number; // session hand # when its level last changed (for note stamping)
 }
 /** An exploit axis: a level-1 label (also the id) and its level-2 ("!") label. */
 export interface ExploitAxis {
@@ -27,6 +28,8 @@ export interface Note {
   t: string; // "YYYY-MM-DD HH:mm"
   text: string;
   h?: number; // hand # of THIS villain's sample when the note was taken
+  pinned?: boolean; // at most one pinned note per player
+  exploits?: { tag: string; level: 1 | 2 }[]; // snapshot: exploits changed the same hand
 }
 
 /**

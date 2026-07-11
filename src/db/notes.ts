@@ -18,3 +18,21 @@ export function toggleDeleteConfirm<T>(
   const same = current === key;
   return { confirm: same ? null : key, doDelete: same };
 }
+
+
+/** Toggle the pin on note[index]; pinning one unpins any other (uniqueness). */
+export function togglePin(notes: Note[], index: number): Note[] {
+  const turningOn = !notes[index]?.pinned;
+  return notes.map((n, i) => {
+    if (i === index) return { ...n, pinned: turningOn };
+    return n.pinned ? { ...n, pinned: false } : n;
+  });
+}
+
+/** Display order with original indices: pinned first, then newest → oldest. */
+export function orderedNotes(notes: Note[]): { note: Note; index: number }[] {
+  const withIdx = notes.map((note, index) => ({ note, index }));
+  const pinned = withIdx.filter((x) => x.note.pinned);
+  const rest = withIdx.filter((x) => !x.note.pinned).reverse();
+  return [...pinned, ...rest];
+}
