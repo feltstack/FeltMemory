@@ -6,6 +6,7 @@ import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, seatXY } from '../db/stats';
 import { exploitLabel, topExploits } from '../db/exploits';
 import { toggleDeleteConfirm } from '../db/notes';
+import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from '../components/Icons';
@@ -280,7 +281,7 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
             >
               <div className="num">{s.seatNo}</div>
               <div className="initials">{s.hero ? 'YOU' : initialsOf(p?.name ?? '?')}</div>
-              <div className="pos">{s.pos}</div>
+              <div className="pos">{abbrevPos(s.pos)}</div>
               {badge && <div className="act-tag">{badge}</div>}
               {hasNote && !badge && <div className="note-dot">📝</div>}
               {s.stack && <div className="stack-tag">${s.stack}</div>}
@@ -310,6 +311,7 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
 
 function SeatList({ editing = false }: { editing?: boolean }) {
   const { live, dispatch, settings } = useApp();
+  const compact = settings.compactRows !== false;
   const { openPlayer, openAssign, toast } = useUi();
   const playersById = useSeatedPlayers();
   // Inline quick-note editor: 📝 on a row opens an input right under it —
@@ -509,7 +511,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                       dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
                     }}
                   >
-                    {s.pos}
+                    {abbrevPos(s.pos)}
                   </span>
                 )
               )}
@@ -523,7 +525,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                   dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
                 }}
               >
-                Call
+                {compact ? abbrevAction('Call') : 'Call'}
               </button>
               <button
                 className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
@@ -533,7 +535,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                   dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
                 }}
               >
-                Raise
+                {compact ? abbrevAction('Raise') : 'Raise'}
               </button>
               {!s.hero && s.playerId != null && (
                 <button
