@@ -85,6 +85,7 @@ export default function HudScreen() {
         </div>
       )}
       <BlindToggles />
+      {!editMode && <PlayerCards />}
     </div>
   );
 }
@@ -593,6 +594,100 @@ function UndoBar() {
           Clear
         </button>
       </div>
+    </div>
+  );
+}
+
+/* ================= player cards (between-hands reading surface) ================= */
+
+/**
+ * One card per OCCUPIED, non-hero seat (seat order). Same player records as the
+ * list rows above — Dexie live queries keep tags/notes/verified in lockstep in
+ * both places. This is the reading/notes surface; the list up top is for logging.
+ */
+function PlayerCards() {
+  const { live, settings } = useApp();
+  const { toast } = useUi();
+  const playersById = useSeatedPlayers();
+  const [collapsed, setCollapsed] = useState(false);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+
+  const cards = live.seats.filter((s) => !s.open && !s.hero && s.playerId != null);
+  if (cards.length === 0) return null;
+
+  const setDraft = (pid: number, v: string) => setDrafts((d) => ({ ...d, [pid]: v }));
+  const saveNote = (pid: number, name: string) => {
+    const text = (drafts[pid] ?? '').trim();
+    if (!text) return;
+    void repo.addPlayerNote(pid, text);
+    setDraft(pid, '');
+    toast(`Note saved on ${name}`);
+  };
+
+  return (
+    <div className="cards-section">
+      <button className="cards-head" onClick={() => setCollapsed((v) => !v)}>
+        <span>Player Cards ({cards.length})</span>
+        <span className="chev">{collapsed ? '▸' : '▾'}</span>
+      </button>
+      {!collapsed && (
+        <div className="cards-grid">
+          {cards.map((s) => {
+            const p = playersById.get(s.playerId!);
+            if (!p) return null;
+            const color = p.tag ? tagColor(p.tag, settings.tags) : undefined;
+            const recent = [...p.notes].slice(-3).reverse();
+            return (
+              <div className="pcard" key={s.seatNo} id={`pcard-${s.seatNo}`}>
+                <div className="pcard-head">
+                  <span className="pcard-seat">{s.seatNo}</span>
+                  <span className="pcard-name">{p.name}</span>
+                  {p.tag && (
+                    <span
+                      className="pcard-tag"
+                      style={{ background: color, borderColor: color }}
+                    >
+                      {p.tag}
+                    </span>
+                  )}
+                  {s.stack && <span className="pcard-stack">${s.stack}</span>}
+                </div>
+                {p.tag && (
+                  <div className="pcard-verify">
+                    <span>Read verified correct</span>
+                    <Switch on={p.verified} onToggle={() => void repo.toggleVerified(p.id!)} />
+                  </div>
+                )}
+                <div className="pcard-notes">
+                  {recent.length === 0 && <div className="pcard-nonote">No notes yet</div>}
+                  {recent.map((n, i) => (
+                    <div className="pcard-note" key={i}>
+                      <div className="pcard-note-text">{n.text}</div>
+                      <div className="ts">
+                        {n.t}
+                        {n.h != null ? ` · Hand #${n.h}` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="quick-note pcard-note-add">
+                  <input
+                    value={drafts[p.id!] ?? ''}
+                    placeholder={`Note on ${p.name}… Enter saves`}
+                    onChange={(e) => setDraft(p.id!, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') saveNote(p.id!, p.name);
+                    }}
+                  />
+                  <button className="mini-btn enabled" onClick={() => saveNote(p.id!, p.name)}>
+                    Save
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
