@@ -95,6 +95,16 @@ export default function SettingsScreen() {
           <Switch on={settings.glare} onToggle={() => updateSettings({ glare: !settings.glare })} />
         </div>
         <div className="settings-item">
+          <div>
+            <div className="label">Compact rows</div>
+            <div className="sub">Denser seat list — fits a full table on one screen</div>
+          </div>
+          <Switch
+            on={settings.compactRows}
+            onToggle={() => updateSettings({ compactRows: !settings.compactRows })}
+          />
+        </div>
+        <div className="settings-item">
           <div className="label">Default Live HUD view</div>
           <select
             className="mini-select"

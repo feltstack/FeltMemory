@@ -132,6 +132,7 @@ export interface Settings {
   theme: 'dark' | 'light';
   glare: boolean;
   defaultView: 'table' | 'list';
+  compactRows: boolean;
   tags: string[];
 }
 
@@ -139,6 +140,7 @@ export const defaultSettings = (): Settings => ({
   theme: 'dark',
   glare: false,
   defaultView: 'list',
+  compactRows: true,
   tags: [...DEFAULT_TAGS],
 });
 

@@ -396,15 +396,24 @@ function SeatList({ editing = false }: { editing?: boolean }) {
   };
 
   return (
-    <div className={editing ? 'seat-list editing' : 'seat-list'}>
-      <div className="seat-list-head">
-        <div className="stat-quad">
-          <div className="sh">VPIP</div>
-          <div className="sh">PFR</div>
-          <div className="sh">3B</div>
-          <div className="sh">Hands</div>
+    <div
+      className={`seat-list${settings.compactRows !== false ? ' compact' : ''}${
+        editing ? ' editing' : ''
+      }`}
+    >
+      {!editing && (
+        <div className="seat-list-head">
+          <div />
+          <div className="stat-quad">
+            <div className="sh">VPIP</div>
+            <div className="sh">PFR</div>
+            <div className="sh">3B</div>
+            <div className="sh">Hands</div>
+          </div>
+          <div className="sh">Pos</div>
+          <div className="sh">Action</div>
         </div>
-      </div>
+      )}
       {live.seats.map((s) => {
         if (s.open) {
           return (
@@ -462,30 +471,10 @@ function SeatList({ editing = false }: { editing?: boolean }) {
             >
               {s.seatNo}
             </div>
-            <div className="row-main">
+            <div className="row-body">
               <div className="row-name-line">
-                <div className="row-name">
-                  {s.hero ? 'Hero' : p?.name ?? '?'}
-                  {!s.hero && notePreview
-                    ? ` — ${notePreview.slice(0, 18)}${notePreview.length > 18 ? '…' : ''}`
-                    : ''}
-                </div>
-                {s.sittingOut ? (
-                  <span className="pos-chip out">OUT</span>
-                ) : (
-                  s.pos && (
-                    <span
-                      className={`pos-chip clickable${s.dealer ? ' btn' : ''}`}
-                      title="Set this seat as the button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
-                      }}
-                    >
-                      {s.pos}
-                    </span>
-                  )
-                )}
+                <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
+                {!s.hero && notePreview && <span className="row-note">— {notePreview}</span>}
                 {badge && <span className="pending-chip">{badge}</span>}
                 {s.stack && <span className="row-stack">${s.stack}</span>}
               </div>
@@ -495,6 +484,24 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                 <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</div>
                 <div className="stat-cell">{s.hero ? '–' : c?.dealt ?? 0}</div>
               </div>
+            </div>
+            <div className="pos-cell">
+              {s.sittingOut ? (
+                <span className="pos-badge out">OUT</span>
+              ) : (
+                s.pos && (
+                  <span
+                    className={`pos-badge clickable${s.dealer ? ' btn' : ''}`}
+                    title="Set this seat as the button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
+                    }}
+                  >
+                    {s.pos}
+                  </span>
+                )
+              )}
             </div>
             <div className="row-actions">
               <button
