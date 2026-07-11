@@ -8,6 +8,7 @@ import { useUi } from '../state/UiContext';
 import { Icon } from './Icons';
 import { StatBox, Switch, TagChip, initialsOf } from './Bits';
 import { ExploitChips } from './ExploitChips';
+import { toggleDeleteConfirm } from '../db/notes';
 import { fmt, pct, tagColor, tagSlug, type Player } from '../types';
 
 export function SheetHost() {
@@ -63,6 +64,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   const player = useLiveQuery(() => db.players.get(playerId), [playerId]);
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [confirmDel, setConfirmDel] = useState<number | null>(null);
 
   const seat = seatNo != null ? live.seats.find((s) => s.seatNo === seatNo) : undefined;
   const allTags = useMemo(() => {
@@ -185,12 +187,40 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
             No notes yet
           </div>
         )}
-        {notes.map((n, i) => (
-          <div className="note-item" key={i}>
-            {n.text}
-            <div className="ts">{n.t}{n.h != null ? ` · Hand #${n.h}` : ''}</div>
-          </div>
-        ))}
+        {notes.map((n, i) => {
+          const orig = (player.notes?.length ?? 0) - 1 - i;
+          const armed = confirmDel === i;
+          return (
+            <div
+              className={`note-item ${armed ? 'confirm-del' : ''}`}
+              key={i}
+              onClick={() => armed && setConfirmDel(null)}
+            >
+              <div className="note-item-body">
+                {n.text}
+                <div className="ts">
+                  {n.t}
+                  {n.h != null ? ` · Hand #${n.h}` : ''}
+                </div>
+              </div>
+              <button
+                className={`note-del ${armed ? 'confirm' : ''}`}
+                title={armed ? 'Tap again to delete' : 'Delete note'}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const r = toggleDeleteConfirm(confirmDel, i);
+                  if (r.doDelete) {
+                    void repo.deletePlayerNote(playerId, orig);
+                    toast('Note deleted');
+                    setConfirmDel(null);
+                  } else setConfirmDel(r.confirm);
+                }}
+              >
+                {armed ? 'Delete?' : '✕'}
+              </button>
+            </div>
+          );
+        })}
       </div>
       <div className="note-add">
         <input
@@ -202,6 +232,17 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
         <button onClick={addNote}>Add</button>
       </div>
       <div className="btn-row" style={{ marginTop: 16 }}>
+        {seat && !seat.hero && (
+          <button
+            className="btn"
+            onClick={() => {
+              dispatch({ type: 'TOGGLE_SITOUT', seatNo: seat.seatNo });
+              toast(seat.sittingOut ? `${player.name} back in` : `${player.name} sitting out`);
+            }}
+          >
+            {seat.sittingOut ? 'Return to seat' : 'Sitting out'}
+          </button>
+        )}
         {seat && (
           <button
             className="btn"

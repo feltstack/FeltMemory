@@ -5,6 +5,7 @@ import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, seatXY } from '../db/stats';
 import { exploitLabel, topExploits } from '../db/exploits';
+import { toggleDeleteConfirm } from '../db/notes';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from '../components/Icons';
@@ -620,6 +621,7 @@ function PlayerCards() {
   const playersById = useSeatedPlayers();
   const [collapsed, setCollapsed] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
 
   const cards = live.seats.filter((s) => !s.open && !s.hero && s.playerId != null);
   if (cards.length === 0) return null;
@@ -670,15 +672,41 @@ function PlayerCards() {
                 <ExploitChips playerId={p.id!} exploits={p.exploits ?? []} axes={settings.exploitAxes} />
                 <div className="pcard-notes">
                   {recent.length === 0 && <div className="pcard-nonote">No notes yet</div>}
-                  {recent.map((n, i) => (
-                    <div className="pcard-note" key={i}>
-                      <div className="pcard-note-text">{n.text}</div>
-                      <div className="ts">
-                        {n.t}
-                        {n.h != null ? ` · Hand #${n.h}` : ''}
+                  {recent.map((n, i) => {
+                    const orig = p.notes.length - 1 - i;
+                    const key = `${p.id}:${orig}`;
+                    const armed = confirmDel === key;
+                    return (
+                      <div
+                        className={`pcard-note ${armed ? 'confirm-del' : ''}`}
+                        key={i}
+                        onClick={() => armed && setConfirmDel(null)}
+                      >
+                        <div className="pcard-note-body">
+                          <div className="pcard-note-text">{n.text}</div>
+                          <div className="ts">
+                            {n.t}
+                            {n.h != null ? ` · Hand #${n.h}` : ''}
+                          </div>
+                        </div>
+                        <button
+                          className={`note-del ${armed ? 'confirm' : ''}`}
+                          title={armed ? 'Tap again to delete' : 'Delete note'}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const r = toggleDeleteConfirm(confirmDel, key);
+                            if (r.doDelete) {
+                              void repo.deletePlayerNote(p.id!, orig);
+                              toast('Note deleted');
+                              setConfirmDel(null);
+                            } else setConfirmDel(r.confirm);
+                          }}
+                        >
+                          {armed ? 'Delete?' : '✕'}
+                        </button>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
                 <div className="quick-note pcard-note-add">
                   <input

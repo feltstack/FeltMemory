@@ -443,3 +443,15 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .axis-add{ flex-wrap:wrap; }
 .axis-add input{ flex:1 1 130px; min-width:0; }
 .chip.ex-filter.active{ background:var(--blue); border-color:var(--blue); color:#04121f; }
+
+/* ---------- Note deletion (two-tap confirm) ---------- */
+.note-item{ display:flex; align-items:flex-start; gap:8px; }
+.note-item-body{ flex:1 1 auto; min-width:0; }
+.pcard-note{ display:flex; align-items:flex-start; gap:8px; }
+.pcard-note-body{ flex:1 1 auto; min-width:0; }
+.note-del{ flex:none; margin-left:auto; border:1px solid var(--border); background:var(--surface-2);
+  color:var(--text-faint); border-radius:7px; min-height:26px; padding:0 8px; font-size:12px; font-weight:800;
+  cursor:pointer; align-self:center; white-space:nowrap; }
+.note-del:hover{ color:var(--red); border-color:var(--red); }
+.note-del.confirm{ background:var(--red); border-color:var(--red); color:#fff; }
+.note-item.confirm-del, .pcard-note.confirm-del{ outline:1px solid var(--red); outline-offset:-1px; }

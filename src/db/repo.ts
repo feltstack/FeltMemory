@@ -9,6 +9,7 @@ import {
   nextButtonSeat,
 } from './stats';
 import { confirmExploit, cycleExploit } from './exploits';
+import { removeNoteAt } from './notes';
 import {
   defaultSettings,
   emptyCounters,
@@ -109,6 +110,12 @@ export async function confirmPlayerExploit(id: number, axisId: string): Promise<
   const p = await db.players.get(id);
   if (!p) return;
   await db.players.update(id, { exploits: confirmExploit(p.exploits ?? [], axisId) });
+}
+
+export async function deletePlayerNote(id: number, index: number): Promise<void> {
+  const p = await db.players.get(id);
+  if (!p) return;
+  await db.players.update(id, { notes: removeNoteAt(p.notes ?? [], index) });
 }
 
 export async function deletePlayer(id: number): Promise<void> {

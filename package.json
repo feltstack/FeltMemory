@@ -1,7 +1,7 @@
 {
   "name": "feltmemory",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.2",
   "description": "FeltMemory — Live HUD & Population Tendencies tracker for live cash game poker",
   "type": "module",
   "scripts": {
