@@ -10,6 +10,7 @@ import {
 } from './stats';
 import { confirmExploit, cycleExploit, sameHandExploits } from './exploits';
 import { removeNoteAt, togglePin } from './notes';
+import { tagStateAfter } from './tags';
 import {
   defaultSettings,
   emptyCounters,
@@ -72,12 +73,7 @@ export async function renamePlayer(id: number, newName: string): Promise<string 
 export async function setPlayerTag(id: number, tag: string): Promise<void> {
   const p = await db.players.get(id);
   if (!p || p.tag === tag) return;
-  await db.players.update(id, {
-    tag,
-    archHand: tag ? p.counters.dealt : null,
-    verified: false,
-    verifiedHand: null,
-  });
+  await db.players.update(id, tagStateAfter(tag, p.counters.dealt));
 }
 
 export async function toggleVerified(id: number): Promise<void> {

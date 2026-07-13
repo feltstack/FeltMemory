@@ -4,8 +4,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, seatXY } from '../db/stats';
-import { exploitLabel, topExploits } from '../db/exploits';
+import { confidenceLabel, exploitLabel, topExploits } from '../db/exploits';
 import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
+import { isDefaultName, resolveRename } from '../db/names';
 import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
@@ -318,6 +319,21 @@ function SeatList({ editing = false }: { editing?: boolean }) {
   // no popup, autofocused, Enter saves, Esc closes.
   const [noteSeat, setNoteSeat] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [renameSeat, setRenameSeat] = useState<number | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const renameCancel = useRef(false);
+  const startRename = (seatNo: number, name: string) => {
+    setRenameSeat(seatNo);
+    setRenameDraft(name);
+  };
+  const commitRename = async (playerId: number, current: string) => {
+    const r = resolveRename(current, renameDraft);
+    if (r.action === 'commit') {
+      const err = await repo.renamePlayer(playerId, r.name!);
+      toast(err ?? 'Renamed');
+    }
+    setRenameSeat(null);
+  };
 
   // Drag-to-reorder (pointer events → works on touch and mouse).
   const [dragSeat, setDragSeat] = useState<number | null>(null);
@@ -409,15 +425,12 @@ function SeatList({ editing = false }: { editing?: boolean }) {
     >
       {!editing && (
         <div className="seat-list-head">
-          <div />
           <div className="stat-quad">
             <div className="sh">VPIP</div>
             <div className="sh">PFR</div>
             <div className="sh">3B</div>
             <div className="sh">Hands</div>
           </div>
-          <div className="sh">Pos</div>
-          <div className="sh">Action</div>
         </div>
       )}
       {live.seats.map((s) => {
@@ -461,101 +474,148 @@ function SeatList({ editing = false }: { editing?: boolean }) {
           <div
             className={rowClass(s.seatNo, s.sittingOut ? 'seat-row sitting-out' : 'seat-row')}
             ref={setRowRef(s.seatNo)}
-            onClick={(e) => {
-              if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
-              else if (s.playerId != null) openPlayer(s.playerId, s.seatNo, anchorOf(e));
-            }}
           >
             <RmBtn seatNo={s.seatNo} hero={s.hero} />
-            <div
-              className={`badge ${s.hero ? 'hero' : ''}`}
-              style={ring && !s.hero ? { borderColor: ring } : undefined}
-              title={s.sittingOut ? 'Tap to sit back in' : 'Tap to sit this player out'}
-              onClick={(e) => {
-                e.stopPropagation();
-                dispatch({ type: 'TOGGLE_SITOUT', seatNo: s.seatNo });
-              }}
-            >
-              {s.seatNo}
-            </div>
-            <div className="row-body">
-              <div className={`row-name-line${pinnedNote ? ' has-pin' : ''}`}>
-                <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
-                {!s.hero &&
-                  topExploits(p?.exploits ?? [], 2).map((e) => (
-                    <span key={e.tag} className={`row-ex lvl${e.level}`}>
-                      {exploitLabel(e, settings.exploitAxes)}
-                      {e.confirmations ? `×${e.confirmations}` : ''}
-                    </span>
-                  ))}
-                {!s.hero && notePreview && (
-                  <span className={`row-note${pinnedNote ? ' pinned' : ''}`}>
-                    {pinnedNote ? '📌 ' : '— '}
-                    {notePreview}
-                  </span>
-                )}
-                {badge && <span className="pending-chip">{badge}</span>}
-                {s.stack && <span className="row-stack">${s.stack}</span>}
-              </div>
-              <div className="stat-quad">
-                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</div>
-                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</div>
-                <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</div>
-                <div className="stat-cell">{s.hero ? '–' : c?.dealt ?? 0}</div>
-              </div>
-            </div>
-            <div className="pos-cell">
-              {s.sittingOut ? (
-                <span className="pos-badge out">OUT</span>
-              ) : (
-                s.pos && (
-                  <span
-                    className={`pos-badge clickable${s.dealer ? ' btn' : ''}`}
-                    title="Set this seat as the button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
-                    }}
-                  >
-                    {abbrevPos(s.pos)}
-                  </span>
-                )
-              )}
-            </div>
-            <div className="row-actions">
-              <button
-                className={`mini-btn enabled ${badge && badge !== 'Open' && !badge.includes('Bet') ? 'tapped' : ''}`}
-                disabled={s.sittingOut}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
-                }}
-              >
-                {compact ? abbrevAction('Call') : 'Call'}
-              </button>
-              <button
-                className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
-                disabled={s.sittingOut}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
-                }}
-              >
-                {compact ? abbrevAction('Raise') : 'Raise'}
-              </button>
-              {!s.hero && s.playerId != null && (
-                <button
-                  className={`mini-btn ${noteSeat === s.seatNo ? 'tapped' : ''}`}
-                  title="Quick note — types right here, no popup"
+            <div className="sr-content">
+              <div className="sr-line1">
+                <div
+                  className={`badge ${s.hero ? 'hero' : ''}`}
+                  style={ring && !s.hero ? { borderColor: ring } : undefined}
+                  title={s.hero ? '' : 'Open player card'}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setNoteDraft('');
-                    setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
+                    if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
+                    else if (s.playerId != null) openPlayer(s.playerId, s.seatNo, anchorOf(e));
                   }}
                 >
-                  📝
-                </button>
-              )}
+                  {s.seatNo}
+                </div>
+                {renameSeat === s.seatNo && s.playerId != null ? (
+                  <input
+                    className="sr-rename"
+                    autoFocus
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onFocus={(e) => {
+                      if (isDefaultName(p?.name ?? '')) e.target.select();
+                      else e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      else if (e.key === 'Escape') {
+                        renameCancel.current = true;
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (renameCancel.current) {
+                        renameCancel.current = false;
+                        setRenameSeat(null);
+                      } else void commitRename(s.playerId!, p?.name ?? '');
+                    }}
+                  />
+                ) : (
+                  <div
+                    className={`sr-name${pinnedNote ? ' has-pin' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
+                      else if (s.playerId != null) startRename(s.seatNo, p?.name ?? '');
+                    }}
+                  >
+                    <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
+                    {!s.hero &&
+                      topExploits(p?.exploits ?? [], 2).map((e) => (
+                        <span key={e.tag} className={`row-ex lvl${e.level}`}>
+                          {exploitLabel(e, settings.exploitAxes)}
+                          {e.confirmations ? `×${e.confirmations}` : ''}
+                        </span>
+                      ))}
+                    {!s.hero && notePreview && (
+                      <span className={`row-note${pinnedNote ? ' pinned' : ''}`}>
+                        {pinnedNote ? '📌 ' : '— '}
+                        {notePreview}
+                      </span>
+                    )}
+                    {badge && <span className="pending-chip">{badge}</span>}
+                    {s.stack && <span className="row-stack">${s.stack}</span>}
+                  </div>
+                )}
+                {!s.hero && s.playerId != null && (
+                  <button
+                    className="sr-chevron"
+                    title="Open player card"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openPlayer(s.playerId!, s.seatNo, anchorOf(e));
+                    }}
+                  >
+                    ›
+                  </button>
+                )}
+              </div>
+              <div className="sr-line2">
+                <div className="stat-quad">
+                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</div>
+                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</div>
+                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</div>
+                  <div className="stat-cell">{s.hero ? '–' : c?.dealt ?? 0}</div>
+                </div>
+                <div className="sr-right">
+                  {s.sittingOut ? (
+                    <span className="pos-badge out">OUT</span>
+                  ) : (
+                    s.pos && (
+                      <span
+                        className={`pos-badge clickable${s.dealer ? ' btn' : ''}`}
+                        title="Set this seat as the button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
+                        }}
+                      >
+                        {abbrevPos(s.pos)}
+                      </span>
+                    )
+                  )}
+                  <div className="row-actions">
+                    <button
+                      className={`mini-btn enabled ${badge && badge !== 'Open' && !badge.includes('Bet') ? 'tapped' : ''}`}
+                      disabled={s.sittingOut}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
+                      }}
+                    >
+                      {compact ? abbrevAction('Call') : 'Call'}
+                    </button>
+                    <button
+                      className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
+                      disabled={s.sittingOut}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
+                      }}
+                    >
+                      {compact ? abbrevAction('Raise') : 'Raise'}
+                    </button>
+                    {!s.hero && s.playerId != null && (
+                      <button
+                        className={`mini-btn ${noteSeat === s.seatNo ? 'tapped' : ''}`}
+                        title="Quick note — types right here, no popup"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setNoteDraft('');
+                          setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
+                        }}
+                      >
+                        📝
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
             <Handle seatNo={s.seatNo} />
           </div>
@@ -672,7 +732,7 @@ function PlayerCards() {
                 </div>
                 {p.tag && (
                   <div className="pcard-verify">
-                    <span>Read verified correct</span>
+                    <span>{confidenceLabel(p.tag, p.exploits ?? [], settings.exploitAxes)}</span>
                     <Switch on={p.verified} onToggle={() => void repo.toggleVerified(p.id!)} />
                   </div>
                 )}

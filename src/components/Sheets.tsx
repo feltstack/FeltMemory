@@ -9,7 +9,7 @@ import { Icon } from './Icons';
 import { StatBox, Switch, TagChip, initialsOf } from './Bits';
 import { ExploitChips } from './ExploitChips';
 import { toggleDeleteConfirm, orderedNotes } from '../db/notes';
-import { exploitLabel } from '../db/exploits';
+import { confidenceLabel, exploitLabel } from '../db/exploits';
 import { fmt, pct, tagColor, tagSlug, type Player } from '../types';
 
 export function SheetHost() {
@@ -91,9 +91,9 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   };
 
   const setTag = async (tag: string) => {
-    if (player.tag === tag) return; // same tag = no-op (doesn't reset the read)
+    if (player.tag === tag) return; // truly same → no-op
     await repo.setPlayerTag(playerId, tag);
-    toast(`Tagged ${tag}`);
+    toast(tag ? `Tagged ${tag}` : 'Untagged — read reset');
   };
 
   const venueRows = Object.entries(player.venues || {});
@@ -130,7 +130,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
               key={t}
               className={`chip ${active ? 'active ' + tagSlug(t) : ''}`}
               style={active ? { background: color, borderColor: color } : undefined}
-              onClick={() => setTag(t)}
+              onClick={() => setTag(active ? '' : t)}
             >
               {t}
             </button>
@@ -140,9 +140,8 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
       <div className="tag-meta">{tagInfo}</div>
       {player.tag && (
         <div className="toggle-row">
-          <div>
-            <div className="label">Read verified correct</div>
-            <div className="sub">Confirms this archetype call held up</div>
+          <div className="label conf-label">
+            {confidenceLabel(player.tag, player.exploits ?? [], settings.exploitAxes)}
           </div>
           <Switch on={player.verified} onToggle={() => repo.toggleVerified(playerId)} />
         </div>
