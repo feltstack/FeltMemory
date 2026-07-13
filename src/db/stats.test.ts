@@ -282,3 +282,26 @@ describe('sitting out (skipped by positions, rotation, dealt-counts)', () => {
     expect(d.get(103)?.dealt).toBe(1);
   });
 });
+
+
+describe('straddle (UTG posts a 3rd blind and acts last)', () => {
+  it('labels the UTG seat STR and shifts the new UTG one seat left', () => {
+    const withStr = assignPositions(table9(), 1, false, true);
+    const p = Object.fromEntries(withStr.filter((s) => !s.open).map((s) => [s.seatNo, s.pos]));
+    expect(p[3]).toBe('BB');
+    expect(p[4]).toBe('STR');
+    expect(p[5]).toBe('UTG'); // seat left of the straddle is the new first-to-act
+    const noStr = assignPositions(table9(), 1, false, false);
+    const p2 = Object.fromEntries(noStr.filter((s) => !s.open).map((s) => [s.seatNo, s.pos]));
+    expect(p2[4]).toBe('UTG'); // without straddle, seat 4 is UTG
+  });
+
+  it('acting order puts the straddler last; first to act is the seat after it', () => {
+    const order = actingOrder(table9(), 1, false, true);
+    expect(order[order.length - 1]).toBe(4); // straddler (UTG seat) acts last
+    expect(order[0]).toBe(5);
+    const base = actingOrder(table9(), 1, false, false);
+    expect(base[base.length - 1]).toBe(3); // normally BB acts last
+    expect(base[0]).toBe(4);
+  });
+});

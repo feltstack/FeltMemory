@@ -120,6 +120,7 @@ export function assignPositions(
   seats: Seat[],
   btnSeat: number,
   noSB: boolean,
+  straddle = false,
 ): Seat[] {
   const out = seats.map((s) => ({ ...s, pos: '', dealer: false }));
   const occupied = out.filter((s) => !s.open && !s.sittingOut);
@@ -147,6 +148,11 @@ export function assignPositions(
   }
   rot[next].pos = 'BB';
   next++;
+  if (straddle && next < rot.length) {
+    // UTG straddle: a 3rd blind that acts last preflop; the seat left of it is the new UTG.
+    rot[next].pos = 'STR';
+    next++;
+  }
   const labels = earlyLabels(rot.length - next);
   for (let k = 0; k < labels.length; k++) rot[next + k].pos = labels[k];
   return out;
@@ -169,11 +175,17 @@ export function actingOrder(
   seats: Seat[],
   btnSeat: number,
   noSB: boolean,
+  straddle = false,
 ): number[] {
   const occupied = seats.filter((s) => !s.open && !s.sittingOut);
   const rot = rotationFrom(occupied, btnSeat).map((s) => s.seatNo);
   if (rot.length <= 2) return rot; // HU: BTN acts first preflop
   const blinds = noSB ? 2 : 3; // BTN(+SB)+BB at the head of rotation
+  if (straddle && rot.length > blinds) {
+    // Straddler (UTG) posts a 3rd blind and acts LAST preflop.
+    const strad = rot[blinds];
+    return [...rot.slice(blinds + 1), ...rot.slice(0, blinds), strad];
+  }
   return [...rot.slice(blinds), ...rot.slice(0, blinds)];
 }
 
@@ -193,6 +205,7 @@ export function computeHandDeltas(
   entries: HandEntry[],
   btnSeat: number,
   noSB: boolean,
+  straddle = false,
 ): Map<number, HandDelta> {
   const deltas = new Map<number, HandDelta>();
   const seatToPlayer = new Map<number, number | null>();
@@ -237,7 +250,7 @@ export function computeHandDeltas(
   // 3-bet opportunities from position order.
   const open = ordered.find((e) => e.action === 'raise' && e.raiseLevel === 1);
   if (open) {
-    const order = actingOrder(seats, btnSeat, noSB);
+    const order = actingOrder(seats, btnSeat, noSB, straddle);
     const idxOf = (seatNo: number) => order.indexOf(seatNo);
     const openIdx = idxOf(open.seatNo);
     const threeBetEntry = ordered.find(

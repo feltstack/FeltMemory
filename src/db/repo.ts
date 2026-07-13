@@ -239,6 +239,7 @@ export async function commitHand(live: LiveState): Promise<number> {
     live.currentEntries,
     live.btnSeat,
     live.noSB,
+    live.straddle,
   );
 
   await db.transaction('rw', [db.players, db.sessions, db.hands], async () => {

@@ -94,7 +94,7 @@ type Action =
 function withPositions(live: LiveState): LiveState {
   return {
     ...live,
-    seats: assignPositions(live.seats, live.btnSeat, live.noSB),
+    seats: assignPositions(live.seats, live.btnSeat, live.noSB, live.straddle),
   };
 }
 
@@ -228,7 +228,7 @@ function reducer(live: LiveState, a: Action): LiveState {
       return withPositions({ ...live, btnSeat: a.seatNo });
     case 'TOGGLE': {
       const next = { ...live, [a.key]: !live[a.key] } as LiveState;
-      return a.key === 'noSB' ? withPositions(next) : next;
+      return a.key === 'noSB' || a.key === 'straddle' ? withPositions(next) : next;
     }
     case 'TAP': {
       const rc = raiseCount(live.currentEntries);
