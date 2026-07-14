@@ -417,6 +417,14 @@ function SeatList({ editing = false }: { editing?: boolean }) {
     setNoteSeat(null);
   };
 
+  const addNoName = async (seatNo: number) => {
+    const [np] = await repo.createNoNamePlayers(1);
+    if (np?.id != null) {
+      dispatch({ type: 'ASSIGN_SEAT', seatNo, playerId: np.id });
+      toast(`Added ${np.name}`);
+    }
+  };
+
   return (
     <div
       className={`seat-list${settings.compactRows !== false ? ' compact' : ''}${
@@ -446,8 +454,19 @@ function SeatList({ editing = false }: { editing?: boolean }) {
               <div className="row-main">
                 <div className="row-name">Open Seat</div>
               </div>
-              <button className="mini-btn enabled" onClick={() => openAssign(s.seatNo)}>
-                ＋ Add
+              <button
+                className="mini-btn enabled seat-add"
+                title="Add a No Name villain"
+                onClick={() => void addNoName(s.seatNo)}
+              >
+                ＋
+              </button>
+              <button
+                className="mini-btn seat-add"
+                title="Seat a known player from your database"
+                onClick={() => openAssign(s.seatNo)}
+              >
+                <Icon name="players" style={{ width: 18, height: 18 }} />
               </button>
               <button
                 className="mini-btn"
