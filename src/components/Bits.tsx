@@ -4,7 +4,11 @@ import type { SheetAnchor } from '../state/UiContext';
 
 /** Anchor rect of the clicked element, for desktop popover positioning. */
 export function anchorOf(e: React.MouseEvent): SheetAnchor {
-  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  // Anchor to the whole row/record container so the card's top meets the
+  // ROW's bottom border (not the small badge that was tapped).
+  const el = e.currentTarget as HTMLElement;
+  const container = (el.closest('.seat-row, tr') as HTMLElement | null) ?? el;
+  const r = container.getBoundingClientRect();
   return { top: r.top, bottom: r.bottom, left: r.left };
 }
 

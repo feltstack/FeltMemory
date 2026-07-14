@@ -201,12 +201,16 @@ input,select,textarea{ font-family:inherit; }
 
 /* ---------- Undo bar ---------- */
 .undo-bar{
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  display:flex; align-items:center; gap:8px;
   background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);
-  padding:8px 12px; margin-bottom:10px; font-size:12.5px; color:var(--text-dim);
+  padding:8px 12px; margin:12px 0 10px; font-size:12px; color:var(--text-dim);
 }
 .undo-bar b{ color:var(--text); }
-.undo-bar .undo-actions{ display:flex; gap:8px; }
+.ub-info{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ub-way{ flex:none; font-weight:800; color:var(--accent); background:rgba(230,130,15,.14);
+  border:1px solid var(--accent-dim); border-radius:999px; padding:4px 12px; font-size:12.5px; white-space:nowrap; }
+.undo-bar .undo-actions{ display:flex; gap:8px; flex:none; }
+.undo-bar .undo-actions .mini-btn{ min-width:66px; }
 
 /* ---------- Toggle rows ---------- */
 .toggle-row{ display:flex; align-items:center; justify-content:space-between; padding:11px 2px; border-bottom:1px solid var(--border); }
@@ -269,13 +273,13 @@ table.data tbody tr td:last-child{ border-radius:0 var(--radius-sm) var(--radius
 /* ---------- Sheet (bottom sheet / modal) ---------- */
 .sheet-backdrop{
   position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50;
-  display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:opacity .18s;
+  display:flex; align-items:flex-end; justify-content:center; opacity:0; pointer-events:none; transition:none;
 }
 .sheet-backdrop.show{ opacity:1; pointer-events:auto; }
 .sheet{
   background:var(--surface); width:100%; max-width:560px; border-radius:20px 20px 0 0;
   padding:16px 18px calc(22px + var(--safe-bottom)); max-height:86vh; overflow-y:auto;
-  transform:translateY(16px); transition:transform .18s; border:1px solid var(--border); border-bottom:none;
+  border:1px solid var(--border); border-bottom:none;
 }
 .sheet-backdrop.show .sheet{ transform:translateY(0); }
 .sheet-handle{ width:36px; height:4px; background:var(--border); border-radius:99px; margin:0 auto 14px; }
@@ -387,7 +391,7 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 }
 
 /* ---------- Desktop popover mode for the player sheet ---------- */
-.sheet-backdrop.popover-mode{ background:transparent; }
+.sheet-backdrop.popover-mode{ background:transparent; transition:none; }
 .sheet.popover-sheet{
   position:fixed; border-radius:14px; border:1px solid var(--border);
   padding:14px 16px 18px; overflow-y:auto; box-shadow:var(--shadow);

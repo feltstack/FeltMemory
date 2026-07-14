@@ -15,28 +15,28 @@ import { fmt, pct, tagColor, tagSlug, type Player } from '../types';
 export function SheetHost() {
   const { sheet, closeSheet } = useUi();
 
-  // Desktop: anchor the player card to the clicked row/chip as a popover
-  // instead of a detached bottom sheet. Mobile keeps the thumb-friendly sheet.
-  const popover =
-    sheet?.kind === 'player' && sheet.anchor && window.innerWidth >= 900
-      ? sheet.anchor
-      : null;
+  // Anchor the player card to the tapped row (all widths): its top crosses the
+  // row's bottom border and it hugs the left, so it opens next to the tap with
+  // no animation. Assign/menu sheets (no anchor) stay as bottom sheets.
+  const popover = sheet?.kind === 'player' && sheet.anchor ? sheet.anchor : null;
 
   let popStyle: React.CSSProperties | undefined;
   if (popover) {
-    const width = 440;
-    const margin = 12;
-    const spaceBelow = window.innerHeight - popover.bottom - margin;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const wide = vw >= 900;
+    const width = wide ? 440 : Math.min(340, vw - 16);
+    const margin = 10;
+    const maxH = wide ? 620 : 640;
+    const left = Math.min(Math.max(margin, popover.left), vw - width - margin);
+    const topBelow = popover.bottom - 6; // top crosses the row's bottom border
+    const spaceBelow = vh - topBelow - margin;
     const spaceAbove = popover.top - margin;
-    const below = spaceBelow >= 340 || spaceBelow >= spaceAbove;
-    popStyle = {
-      width,
-      left: Math.min(Math.max(margin, popover.left), window.innerWidth - width - margin),
-      maxHeight: Math.min(620, (below ? spaceBelow : spaceAbove) - 4),
-      ...(below
-        ? { top: popover.bottom + 6 }
-        : { bottom: window.innerHeight - popover.top + 6 }),
-    };
+    if (spaceBelow >= 220 || spaceBelow >= spaceAbove) {
+      popStyle = { width, left, top: topBelow, maxHeight: Math.min(maxH, spaceBelow) };
+    } else {
+      popStyle = { width, left, bottom: vh - popover.top + 6, maxHeight: Math.min(maxH, spaceAbove) };
+    }
   }
 
   return (
@@ -154,31 +154,6 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
         <StatBox v={fmt(pct(c.threeBet, c.threeBetOpp))} label="3-Bet" />
         <StatBox v={String(c.dealt)} label="Hands" />
       </div>
-      {seat && (
-        <div className="stack-inline">
-          <label>Stack $</label>
-          <input
-            inputMode="numeric"
-            placeholder="e.g. 450"
-            value={seat.stack}
-            onChange={(e) =>
-              dispatch({ type: 'SET_STACK', seatNo: seat.seatNo, stack: e.target.value })
-            }
-          />
-        </div>
-      )}
-      <div className="section-title">Seen at</div>
-      <div className="venue-breakdown">
-        {venueRows.length === 0 && <div>No venue history yet</div>}
-        {venueRows.map(([v, n]) => (
-          <div key={v}>
-            <span>{v}</span>
-            <span>
-              {n} session{n === 1 ? '' : 's'}
-            </span>
-          </div>
-        ))}
-      </div>
       <div className="section-title">Notes</div>
       <div className="notes-list">
         {(player.notes?.length ?? 0) === 0 && (
@@ -251,6 +226,31 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
           onKeyDown={(e) => e.key === 'Enter' && addNote()}
         />
         <button onClick={addNote}>Add</button>
+      </div>
+      {seat && (
+        <div className="stack-inline">
+          <label>Stack $</label>
+          <input
+            inputMode="numeric"
+            placeholder="e.g. 450"
+            value={seat.stack}
+            onChange={(e) =>
+              dispatch({ type: 'SET_STACK', seatNo: seat.seatNo, stack: e.target.value })
+            }
+          />
+        </div>
+      )}
+      <div className="section-title">Seen at</div>
+      <div className="venue-breakdown">
+        {venueRows.length === 0 && <div>No venue history yet</div>}
+        {venueRows.map(([v, n]) => (
+          <div key={v}>
+            <span>{v}</span>
+            <span>
+              {n} session{n === 1 ? '' : 's'}
+            </span>
+          </div>
+        ))}
       </div>
       <div className="btn-row" style={{ marginTop: 16 }}>
         {seat && !seat.hero && (

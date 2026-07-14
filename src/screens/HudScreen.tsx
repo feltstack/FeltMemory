@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
-import { dealerXY, pendingBadge, seatXY } from '../db/stats';
+import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
 import { confidenceLabel, exploitLabel, topExploits } from '../db/exploits';
 import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
 import { isDefaultName, resolveRename } from '../db/names';
@@ -64,7 +64,6 @@ export default function HudScreen() {
       {editMode && (
         <div className="edit-hint">Drag ≡ to reorder · tap − to remove a seat · Done when finished</div>
       )}
-      <UndoBar />
       <div className={showCompanion ? 'hud-grid' : ''}>
         <div>
           {effectiveView === 'table' ? (
@@ -90,6 +89,7 @@ export default function HudScreen() {
         </div>
       )}
       <BlindToggles />
+      <UndoBar />
       {!editMode && <PlayerCards />}
     </div>
   );
@@ -655,15 +655,17 @@ function UndoBar() {
   const label =
     last.action === 'raise'
       ? last.raiseLevel === 1
-        ? 'Open raise'
+        ? 'open'
         : `${last.raiseLevel + 1}-bet`
       : last.action;
+  const way = potWayLabel(live.currentEntries);
   return (
     <div className="undo-bar">
-      <div>
-        This hand: <b>{live.currentEntries.length}</b> action
-        {live.currentEntries.length === 1 ? '' : 's'} · last: <b>seat {last.seatNo} {label}</b>
+      <div className="ub-info">
+        <b>{live.currentEntries.length}</b> action{live.currentEntries.length === 1 ? '' : 's'} · seat{' '}
+        {last.seatNo} {label}
       </div>
+      {way && <div className="ub-way">{way}</div>}
       <div className="undo-actions">
         <button className="mini-btn enabled" onClick={() => dispatch({ type: 'UNDO_TAP' })}>
           Undo

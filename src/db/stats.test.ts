@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   actingOrder,
+  applyTap,
   assignPositions,
   computeHandDeltas,
+  potWayLabel,
   dealerXY,
   nextButtonSeat,
   raiseCount,
@@ -303,5 +305,50 @@ describe('straddle (UTG posts a 3rd blind and acts last)', () => {
     const base = actingOrder(table9(), 1, false, false);
     expect(base[base.length - 1]).toBe(3); // normally BB acts last
     expect(base[0]).toBe(4);
+  });
+});
+
+
+describe('applyTap (re-tap toggles the action off; no escalation)', () => {
+  it('repeated raise taps on one seat stay a single raise (no stacking to 5-bet)', () => {
+    let e = applyTap([], 3, 103, 'raise');
+    expect(e.filter((x) => x.seatNo === 3 && x.action === 'raise')).toHaveLength(1);
+    e = applyTap(e, 3, 103, 'raise'); // re-tap → removes it
+    expect(e.filter((x) => x.seatNo === 3)).toHaveLength(0);
+  });
+  it('re-tapping call removes it', () => {
+    let e = applyTap([], 4, 104, 'call');
+    expect(e).toHaveLength(1);
+    e = applyTap(e, 4, 104, 'call');
+    expect(e).toHaveLength(0);
+  });
+  it('raise levels track distinct seats in order and re-rank after a removal', () => {
+    let e = applyTap([], 2, 102, 'raise');
+    e = applyTap(e, 3, 103, 'raise');
+    e = applyTap(e, 4, 104, 'raise');
+    expect(Object.fromEntries(e.map((x) => [x.seatNo, x.raiseLevel]))).toEqual({ 2: 1, 3: 2, 4: 3 });
+    e = applyTap(e, 3, 103, 'raise'); // remove the middle raise
+    expect(
+      Object.fromEntries(e.filter((x) => x.action === 'raise').map((x) => [x.seatNo, x.raiseLevel])),
+    ).toEqual({ 2: 1, 4: 2 });
+  });
+  it('limp then raise keeps both (limp-reraise)', () => {
+    let e = applyTap([], 5, 105, 'call');
+    e = applyTap(e, 5, 105, 'raise');
+    expect(e.filter((x) => x.seatNo === 5)).toHaveLength(2);
+    expect(e.find((x) => x.action === 'limp')?.seatNo).toBe(5);
+    expect(e.find((x) => x.action === 'raise')?.seatNo).toBe(5);
+  });
+});
+
+describe('potWayLabel', () => {
+  const mk = (seats: number[]) =>
+    seats.map((sn, i) => ({ seatNo: sn, playerId: 100 + sn, action: 'call' as const, raiseLevel: 0, order: i }));
+  it('reports pot participation by distinct seats', () => {
+    expect(potWayLabel(mk([]))).toBe('');
+    expect(potWayLabel(mk([2]))).toBe('1 in');
+    expect(potWayLabel(mk([2, 3]))).toBe('Heads-up');
+    expect(potWayLabel(mk([2, 3, 4]))).toBe('3-way');
+    expect(potWayLabel(mk([2, 2, 3]))).toBe('Heads-up');
   });
 });

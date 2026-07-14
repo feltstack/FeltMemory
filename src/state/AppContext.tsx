@@ -14,10 +14,9 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  applyTap,
   assignPositions,
-  callLabel,
   nextButtonSeat,
-  raiseCount,
   reindexSeats,
   removeSeatAt,
   reorderSeats,
@@ -25,7 +24,6 @@ import {
 import * as repo from '../db/repo';
 import {
   defaultSettings,
-  type HandEntry,
   type LiveState,
   type Seat,
   type Settings,
@@ -230,26 +228,11 @@ function reducer(live: LiveState, a: Action): LiveState {
       const next = { ...live, [a.key]: !live[a.key] } as LiveState;
       return a.key === 'noSB' || a.key === 'straddle' ? withPositions(next) : next;
     }
-    case 'TAP': {
-      const rc = raiseCount(live.currentEntries);
-      const e: HandEntry = {
-        seatNo: a.seatNo,
-        playerId: a.playerId,
-        action: a.action === 'raise' ? 'raise' : callLabel(rc),
-        raiseLevel: a.action === 'raise' ? rc + 1 : 0,
-        order: live.currentEntries.length + 1,
+    case 'TAP':
+      return {
+        ...live,
+        currentEntries: applyTap(live.currentEntries, a.seatNo, a.playerId, a.action),
       };
-      // Ignore exact duplicate call taps (double-tap safety).
-      if (
-        a.action === 'call' &&
-        live.currentEntries.some(
-          (x) => x.seatNo === a.seatNo && x.action !== 'raise',
-        )
-      ) {
-        return live;
-      }
-      return { ...live, currentEntries: [...live.currentEntries, e] };
-    }
     case 'UNDO_TAP':
       return { ...live, currentEntries: live.currentEntries.slice(0, -1) };
     case 'CLEAR_HAND':

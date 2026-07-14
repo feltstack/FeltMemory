@@ -304,6 +304,54 @@ export function raiseCount(entries: HandEntry[]): number {
   );
 }
 
+/** Recompute raise levels (1,2,3… by tap order) and limp/call labels after any add/remove. */
+export function normalizeEntries(entries: HandEntry[]): HandEntry[] {
+  const sorted = [...entries].sort((a, b) => a.order - b.order);
+  let raises = 0;
+  return sorted.map((e) => {
+    if (e.action === 'raise') {
+      raises++;
+      return { ...e, raiseLevel: raises };
+    }
+    return { ...e, action: raises === 0 ? 'limp' : 'call', raiseLevel: 0 };
+  });
+}
+
+/**
+ * A tap toggles that action for the seat: tapping Call/Raise the seat already
+ * has removes it (undo); otherwise it is added. So a seat holds at most one
+ * raise and at most one call/limp — repeated Raise taps no longer escalate.
+ */
+export function applyTap(
+  entries: HandEntry[],
+  seatNo: number,
+  playerId: number | null,
+  action: 'call' | 'raise',
+): HandEntry[] {
+  const isRaise = action === 'raise';
+  const matches = (e: HandEntry) =>
+    e.seatNo === seatNo && (isRaise ? e.action === 'raise' : e.action !== 'raise');
+  let next: HandEntry[];
+  if (entries.some(matches)) {
+    next = entries.filter((e) => !matches(e)); // re-tap → remove
+  } else {
+    const order = entries.reduce((m, e) => Math.max(m, e.order), 0) + 1;
+    next = [
+      ...entries,
+      { seatNo, playerId, action: isRaise ? 'raise' : ('call' as const), raiseLevel: 0, order },
+    ];
+  }
+  return normalizeEntries(next);
+}
+
+/** How many players have voluntarily entered the pot so far (Heads-up / N-way). */
+export function potWayLabel(entries: HandEntry[]): string {
+  const n = new Set(entries.map((e) => e.seatNo)).size;
+  if (n <= 1) return n === 1 ? '1 in' : '';
+  if (n === 2) return 'Heads-up';
+  return `${n}-way`;
+}
+
 /** Short badge for a seat's strongest pending action this hand. */
 export function pendingBadge(
   entries: HandEntry[],
