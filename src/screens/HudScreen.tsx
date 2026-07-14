@@ -88,8 +88,8 @@ export default function HudScreen() {
           </button>
         </div>
       )}
-      <BlindToggles />
       <UndoBar />
+      <BlindToggles />
       {!editMode && <PlayerCards />}
     </div>
   );
@@ -667,11 +667,11 @@ function UndoBar() {
       </div>
       {way && <div className="ub-way">{way}</div>}
       <div className="undo-actions">
-        <button className="mini-btn enabled" onClick={() => dispatch({ type: 'UNDO_TAP' })}>
-          Undo
-        </button>
         <button className="mini-btn" onClick={() => dispatch({ type: 'CLEAR_HAND' })}>
           Clear
+        </button>
+        <button className="mini-btn enabled" onClick={() => dispatch({ type: 'UNDO_TAP' })}>
+          Undo
         </button>
       </div>
     </div>
