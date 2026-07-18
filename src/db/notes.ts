@@ -1,5 +1,6 @@
 /** Pure note helpers — no DB/React, unit-tested. */
 import type { Note } from '../types';
+import { isDefaultName } from './names';
 
 /** Remove the note at a given index in the stored (chronological) array. */
 export function removeNoteAt(notes: Note[], index: number): Note[] {
@@ -35,4 +36,16 @@ export function orderedNotes(notes: Note[]): { note: Note; index: number }[] {
   const pinned = withIdx.filter((x) => x.note.pinned);
   const rest = withIdx.filter((x) => !x.note.pinned).reverse();
   return [...pinned, ...rest];
+}
+
+/**
+ * When a pin starts hiding a CUSTOM name in the row display, preserve that name
+ * as a regular "from name" note so reads embedded in names stay visible.
+ * Idempotent — created once per name (never duplicated, never renames the record).
+ */
+export function preserveCustomName(notes: Note[], name: string, stamp: string): Note[] {
+  if (!notes.some((n) => n.pinned)) return notes; // only when a pin is present
+  if (isDefaultName(name)) return notes; // only custom names
+  if (notes.some((n) => n.fromName && n.text === name)) return notes; // once only
+  return [...notes, { t: stamp, text: name, fromName: true }];
 }

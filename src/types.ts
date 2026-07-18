@@ -30,6 +30,7 @@ export interface Note {
   h?: number; // hand # of THIS villain's sample when the note was taken
   pinned?: boolean; // at most one pinned note per player
   exploits?: { tag: string; level: 1 | 2 }[]; // snapshot: exploits changed the same hand
+  fromName?: boolean; // auto-created to preserve a custom name a pin now hides
 }
 
 /**

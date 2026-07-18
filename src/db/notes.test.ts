@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes } from './notes';
+import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName } from './notes';
 import type { Note } from '../types';
 
 const N = (text: string): Note => ({ t: '2026-07-11 12:00', text });
@@ -61,5 +61,25 @@ describe('pinned notes (exactly one)', () => {
     expect(orderedNotes(notes).map((x) => [x.note.text, x.index])).toEqual([
       ['b', 1], ['d', 3], ['c', 2], ['a', 0],
     ]);
+  });
+});
+
+describe('preserveCustomName (name→note, once-only)', () => {
+  const N = (text: string, opts: Partial<Note> = {}): Note => ({ t: 't', text, ...opts });
+  it('adds a from-name note when a pin hides a custom name', () => {
+    const out = preserveCustomName([N('PIN', { pinned: true })], '1600 Loose', 'ts');
+    expect(out).toHaveLength(2);
+    expect(out[1]).toEqual({ t: 'ts', text: '1600 Loose', fromName: true });
+  });
+  it('never duplicates on repeat calls (once only)', () => {
+    let out = preserveCustomName([N('PIN', { pinned: true })], '1600 Loose', 'ts');
+    out = preserveCustomName(out, '1600 Loose', 'ts2');
+    expect(out.filter((n) => n.fromName)).toHaveLength(1);
+  });
+  it('no-op for default names', () => {
+    expect(preserveCustomName([N('PIN', { pinned: true })], 'No Name 3', 'ts')).toHaveLength(1);
+  });
+  it('no-op when nothing is pinned', () => {
+    expect(preserveCustomName([N('a read')], 'KoleStaley', 'ts')).toHaveLength(1);
   });
 });

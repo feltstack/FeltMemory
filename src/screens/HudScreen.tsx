@@ -4,9 +4,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
-import { confidenceLabel, exploitLabel, topExploits } from '../db/exploits';
+import { confidenceLabel, exploitLabel } from '../db/exploits';
 import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
-import { isDefaultName, resolveRename } from '../db/names';
+import { isDefaultName, resolveRename, rowDisplayName } from '../db/names';
 import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
@@ -431,16 +431,6 @@ function SeatList({ editing = false }: { editing?: boolean }) {
         editing ? ' editing' : ''
       }`}
     >
-      {!editing && (
-        <div className="seat-list-head">
-          <div className="stat-quad">
-            <div className="sh">VPIP</div>
-            <div className="sh">PFR</div>
-            <div className="sh">3B</div>
-            <div className="sh">Hands</div>
-          </div>
-        </div>
-      )}
       {live.seats.map((s) => {
         if (s.open) {
           return (
@@ -486,8 +476,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
         const c = p?.counters;
         const ring = p?.tag ? tagColor(p.tag, settings.tags) : undefined;
         const badge = pendingBadge(live.currentEntries, s.seatNo);
-        const pinnedNote = p?.notes?.find((n) => n.pinned);
-        const notePreview = pinnedNote?.text ?? (p?.notes?.length ? p.notes[p.notes.length - 1].text : '');
+        const displayName = s.hero ? 'Hero' : rowDisplayName(p?.name ?? '?', p?.notes ?? []);
         return (
           <div key={s.seatNo}>
           <div
@@ -495,146 +484,113 @@ function SeatList({ editing = false }: { editing?: boolean }) {
             ref={setRowRef(s.seatNo)}
           >
             <RmBtn seatNo={s.seatNo} hero={s.hero} />
-            <div className="sr-content">
-              <div className="sr-line1">
-                <div
-                  className={`badge ${s.hero ? 'hero' : ''}`}
-                  style={ring && !s.hero ? { borderColor: ring } : undefined}
-                  title={s.hero ? '' : 'Open player card'}
+            <div
+              className={`badge ${s.hero ? 'hero' : ''}`}
+              style={ring && !s.hero ? { borderColor: ring } : undefined}
+              title={s.hero ? '' : 'Open player card'}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
+                else if (s.playerId != null) openPlayer(s.playerId, s.seatNo, anchorOf(e));
+              }}
+            >
+              {s.seatNo}
+            </div>
+            {renameSeat === s.seatNo && s.playerId != null ? (
+              <input
+                className="sr-rename"
+                autoFocus
+                value={renameDraft}
+                onChange={(e) => setRenameDraft(e.target.value)}
+                onFocus={(e) => {
+                  if (isDefaultName(p?.name ?? '')) e.target.select();
+                  else e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') e.currentTarget.blur();
+                  else if (e.key === 'Escape') {
+                    renameCancel.current = true;
+                    e.currentTarget.blur();
+                  }
+                }}
+                onBlur={() => {
+                  if (renameCancel.current) {
+                    renameCancel.current = false;
+                    setRenameSeat(null);
+                  } else void commitRename(s.playerId!, p?.name ?? '');
+                }}
+              />
+            ) : (
+              <div
+                className="sr-name"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
+                  else if (s.playerId != null) startRename(s.seatNo, p?.name ?? '');
+                }}
+              >
+                <span className="row-name">{displayName}</span>
+                {badge && <span className="pending-chip">{badge}</span>}
+              </div>
+            )}
+            <div className="sr-pill">
+              <span>{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</span>
+              <span>{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</span>
+              <span>{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</span>
+              <span className="sep">·</span>
+              <span>{s.hero ? '–' : c?.dealt ?? 0}</span>
+            </div>
+            {s.sittingOut ? (
+              <span className="pos-badge out">OUT</span>
+            ) : (
+              s.pos && (
+                <span
+                  className={`pos-badge clickable${s.dealer ? ' btn' : ''}`}
+                  title="Set this seat as the button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
-                    else if (s.playerId != null) openPlayer(s.playerId, s.seatNo, anchorOf(e));
+                    dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
                   }}
                 >
-                  {s.seatNo}
-                </div>
-                {renameSeat === s.seatNo && s.playerId != null ? (
-                  <input
-                    className="sr-rename"
-                    autoFocus
-                    value={renameDraft}
-                    onChange={(e) => setRenameDraft(e.target.value)}
-                    onFocus={(e) => {
-                      if (isDefaultName(p?.name ?? '')) e.target.select();
-                      else e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') e.currentTarget.blur();
-                      else if (e.key === 'Escape') {
-                        renameCancel.current = true;
-                        e.currentTarget.blur();
-                      }
-                    }}
-                    onBlur={() => {
-                      if (renameCancel.current) {
-                        renameCancel.current = false;
-                        setRenameSeat(null);
-                      } else void commitRename(s.playerId!, p?.name ?? '');
-                    }}
-                  />
-                ) : (
-                  <div
-                    className={`sr-name${pinnedNote ? ' has-pin' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
-                      else if (s.playerId != null) startRename(s.seatNo, p?.name ?? '');
-                    }}
-                  >
-                    <span className="row-name">{s.hero ? 'Hero' : p?.name ?? '?'}</span>
-                    {!s.hero &&
-                      topExploits(p?.exploits ?? [], 2).map((e) => (
-                        <span key={e.tag} className={`row-ex lvl${e.level}`}>
-                          {exploitLabel(e, settings.exploitAxes)}
-                          {e.confirmations ? `×${e.confirmations}` : ''}
-                        </span>
-                      ))}
-                    {!s.hero && notePreview && (
-                      <span className={`row-note${pinnedNote ? ' pinned' : ''}`}>
-                        {pinnedNote ? '📌 ' : '— '}
-                        {notePreview}
-                      </span>
-                    )}
-                    {badge && <span className="pending-chip">{badge}</span>}
-                    {s.stack && <span className="row-stack">${s.stack}</span>}
-                  </div>
-                )}
-                {!s.hero && s.playerId != null && (
-                  <button
-                    className="sr-chevron"
-                    title="Open player card"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openPlayer(s.playerId!, s.seatNo, anchorOf(e));
-                    }}
-                  >
-                    ›
-                  </button>
-                )}
-              </div>
-              <div className="sr-line2">
-                <div className="stat-quad">
-                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</div>
-                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.pfr ?? 0, c?.dealt ?? 0))}</div>
-                  <div className="stat-cell">{s.hero ? '–' : fmt(pct(c?.threeBet ?? 0, c?.threeBetOpp ?? 0))}</div>
-                  <div className="stat-cell">{s.hero ? '–' : c?.dealt ?? 0}</div>
-                </div>
-                <div className="sr-right">
-                  {s.sittingOut ? (
-                    <span className="pos-badge out">OUT</span>
-                  ) : (
-                    s.pos && (
-                      <span
-                        className={`pos-badge clickable${s.dealer ? ' btn' : ''}`}
-                        title="Set this seat as the button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          dispatch({ type: 'SET_BTN', seatNo: s.seatNo });
-                        }}
-                      >
-                        {abbrevPos(s.pos)}
-                      </span>
-                    )
-                  )}
-                  <div className="row-actions">
-                    <button
-                      className={`mini-btn enabled ${badge && badge !== 'Open' && !badge.includes('Bet') ? 'tapped' : ''}`}
-                      disabled={s.sittingOut}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
-                      }}
-                    >
-                      {compact ? abbrevAction('Call') : 'Call'}
-                    </button>
-                    <button
-                      className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
-                      disabled={s.sittingOut}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
-                      }}
-                    >
-                      {compact ? abbrevAction('Raise') : 'Raise'}
-                    </button>
-                    {!s.hero && s.playerId != null && (
-                      <button
-                        className={`mini-btn ${noteSeat === s.seatNo ? 'tapped' : ''}`}
-                        title="Quick note — types right here, no popup"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setNoteDraft('');
-                          setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
-                        }}
-                      >
-                        📝
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                  {abbrevPos(s.pos)}
+                </span>
+              )
+            )}
+            <div className="row-actions">
+              <button
+                className={`mini-btn enabled ${badge && badge !== 'Open' && !badge.includes('Bet') ? 'tapped' : ''}`}
+                disabled={s.sittingOut}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'call' });
+                }}
+              >
+                {compact ? abbrevAction('Call') : 'Call'}
+              </button>
+              <button
+                className={`mini-btn enabled ${badge && (badge === 'Open' || badge.includes('Bet')) ? 'tapped' : ''}`}
+                disabled={s.sittingOut}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  dispatch({ type: 'TAP', seatNo: s.seatNo, playerId: s.playerId, action: 'raise' });
+                }}
+              >
+                {compact ? abbrevAction('Raise') : 'Raise'}
+              </button>
+              {!s.hero && s.playerId != null && (
+                <button
+                  className={`mini-btn ${noteSeat === s.seatNo ? 'tapped' : ''}`}
+                  title="Quick note — types right here, no popup"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNoteDraft('');
+                    setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
+                  }}
+                >
+                  📝
+                </button>
+              )}
             </div>
             <Handle seatNo={s.seatNo} />
           </div>
@@ -779,6 +735,7 @@ function PlayerCards() {
                               {n.t}
                               {n.h != null ? ` · Hand #${n.h}` : ''}
                             </span>
+                            {n.fromName && <span className="note-from">from name</span>}
                             {n.exploits?.map((x, k) => (
                               <span key={k} className={`note-ex lvl${x.level}`}>
                                 {exploitLabel(x, settings.exploitAxes)}

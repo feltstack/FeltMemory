@@ -179,6 +179,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
                     {n.t}
                     {n.h != null ? ` · Hand #${n.h}` : ''}
                   </span>
+                  {n.fromName && <span className="note-from">from name</span>}
                   {n.exploits?.map((x, k) => (
                     <span key={k} className={`note-ex lvl${x.level}`}>
                       {exploitLabel(x, settings.exploitAxes)}

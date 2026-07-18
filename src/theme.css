@@ -118,68 +118,52 @@ input,select,textarea{ font-family:inherit; }
 .seat-chip .act-tag{ position:absolute; top:-14px; left:50%; transform:translateX(-50%); font-size:8px; font-weight:800; color:#1a1200; background:var(--accent); border-radius:6px; padding:1px 5px; white-space:nowrap; z-index:3; }
 .dealer-btn{ position:absolute; width:19px; height:19px; border-radius:50%; background:#f2f2f2; color:#111; font-size:9px; font-weight:900; display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%); border:2px solid #06120e; box-shadow:0 2px 6px rgba(0,0,0,.5); z-index:5; }
 
-/* ---------- List view (seat rows) — shared grid: header labels sit exactly over values ---------- */
-.seat-list{ --seat:30px; }
-
-/* Header: 4 stat labels aligned over the line-2 stat values. */
-.seat-list-head{ display:block; padding:2px 9px 6px; }
-.seat-list-head .stat-quad{ display:grid; grid-template-columns:repeat(4,38px); }
-.seat-list-head .sh{ font-size:9.5px; font-weight:800; letter-spacing:.02em; text-transform:uppercase; color:var(--text-dim); text-align:center; }
+/* ---------- List view (seat rows) — single-line compact ---------- */
+.seat-list-head{ display:none; }
 
 .seat-row{
-  display:flex; align-items:stretch; gap:8px;
+  display:flex; align-items:center; gap:6px;
   background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);
-  padding:7px 9px; margin-bottom:5px;
+  padding:5px 8px; margin-bottom:5px;
 }
-.seat-list:not(.compact) .seat-row{ padding:9px 10px; margin-bottom:7px; }
-.seat-row.open{ align-items:center; border-style:dashed; }
+.seat-list:not(.compact) .seat-row{ padding:8px 10px; margin-bottom:6px; }
+.seat-row.open{ border-style:dashed; }
 .seat-row.open .row-main{ flex:1 1 auto; min-width:0; }
-.seat-row.open .row-name{ font-size:13.5px; color:var(--text-faint); }
-
-.sr-content{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:5px; }
-.sr-line1{ display:flex; align-items:center; gap:9px; }
-.sr-line2{ display:flex; align-items:center; gap:8px; }
+.seat-row.open .row-name{ font-size:13px; color:var(--text-faint); }
 
 .badge{
-  width:var(--seat,30px); height:var(--seat,30px); border-radius:50%; flex:none;
+  width:26px; height:26px; border-radius:50%; flex:none;
   display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-size:12px; border:2px solid var(--grey); background:var(--surface-2); cursor:pointer;
+  font-weight:800; font-size:11px; border:2px solid var(--grey); background:var(--surface-2); cursor:pointer;
 }
 .badge.hero{ border-color:var(--accent); color:var(--accent); }
 
-/* Line 1: name / pinned-note take ALL remaining width; ellipsis only when genuinely too long. */
-.sr-name{ flex:1 1 auto; min-width:0; display:flex; align-items:baseline; gap:6px; cursor:text; }
-.row-name{ font-weight:700; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; }
-.seat-list:not(.compact) .row-name{ font-size:15px; }
-.row-note{ flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px; color:var(--text-dim); }
-.sr-name.has-pin .row-name{ max-width:45%; }
-.row-note.pinned{ color:var(--text); }
-.row-stack{ font-size:11px; color:var(--text-dim); font-weight:700; flex:none; }
-.sr-rename{ flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:700; padding:5px 7px; border:1px solid var(--accent); border-radius:6px; background:var(--surface-2); color:var(--text); }
+/* Name slot takes all remaining width; truncates only when genuinely too long. */
+.sr-name{ flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:6px; cursor:text; }
+.row-name{ font-weight:700; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:0 1 auto; min-width:0; }
+.seat-list:not(.compact) .row-name{ font-size:14.5px; }
+.sr-rename{ flex:1 1 auto; min-width:0; font-size:13px; font-weight:700; padding:4px 6px; border:1px solid var(--accent); border-radius:6px; background:var(--surface-2); color:var(--text); }
 
-.sr-chevron{ flex:none; width:44px; min-height:40px; align-self:stretch; background:none; border:none; color:var(--text-faint); font-size:22px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.sr-chevron:hover{ color:var(--text); }
+/* condensed Pokeri-style stat pill: VPIP PFR 3B · Hands */
+.sr-pill{ flex:none; display:flex; align-items:center; gap:5px; background:var(--surface-2); border:1px solid var(--border);
+  border-radius:6px; padding:2px 7px; font-size:10.5px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--text); }
+.sr-pill .sep{ color:var(--text-faint); font-weight:600; }
 
-/* Line 2: stat values (left) · pos + C + R + note (right). */
-.stat-quad{ flex:none; display:grid; grid-template-columns:repeat(4,38px); }
-.stat-quad .stat-cell{ text-align:center; font-size:12px; font-weight:800; color:var(--text); font-variant-numeric:tabular-nums; min-width:0; overflow:hidden; }
-.seat-list:not(.compact) .stat-quad .stat-cell{ font-size:13.5px; }
-
-.sr-right{ display:flex; align-items:center; gap:6px; margin-left:auto; }
-.pos-badge{ font-size:11px; font-weight:800; color:var(--text-dim); cursor:pointer; white-space:nowrap; }
+.pos-badge{ flex:none; font-size:10.5px; font-weight:800; color:var(--text-dim); cursor:pointer; white-space:nowrap; min-width:22px; text-align:center; }
 .pos-badge.clickable:hover{ color:var(--accent); }
-.pos-badge.btn{ background:#000; color:#fff; border:1px solid var(--text-faint); border-radius:999px; min-width:24px; height:22px; padding:0 5px; display:flex; align-items:center; justify-content:center; font-size:9.5px; letter-spacing:.02em; }
-.pos-badge.out{ color:#fff; background:#6b7280; border-radius:6px; padding:1px 6px; font-size:9.5px; }
+.pos-badge.btn{ background:#000; color:#fff; border:1px solid var(--text-faint); border-radius:999px; min-width:22px; height:20px; padding:0 4px; display:flex; align-items:center; justify-content:center; font-size:9px; letter-spacing:.02em; }
+.pos-badge.out{ color:#fff; background:#6b7280; border-radius:6px; padding:1px 5px; font-size:9px; }
 
-.row-actions{ display:flex; gap:6px; align-items:center; }
-/* ≥40px effective tap targets even though visually compact. */
-.mini-btn{ border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); border-radius:8px; padding:0 8px; min-height:40px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; white-space:nowrap; flex:none; }
-.sr-right .mini-btn{ min-width:40px; padding:0 6px; }
+.row-actions{ display:flex; gap:5px; align-items:center; flex:none; }
+/* Visually compact, but ≥40px effective tap height. */
+.mini-btn{ border:1px solid var(--border); background:var(--surface-2); color:var(--text-dim); border-radius:8px;
+  padding:0 6px; min-width:36px; min-height:40px; font-size:12px; font-weight:700; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; white-space:nowrap; flex:none; }
 .seat-list:not(.compact) .mini-btn{ font-size:13px; }
 .mini-btn.enabled{ color:var(--text); border-color:var(--text-faint); }
 .mini-btn.tapped{ background:var(--accent); border-color:var(--accent); color:#1a1200; }
 .mini-btn:disabled{ opacity:.4; cursor:default; }
-.pending-chip{ font-size:9.5px; font-weight:800; color:#1a1200; background:var(--accent); border-radius:6px; padding:1px 6px; flex:none; align-self:center; }
+.pending-chip{ font-size:9.5px; font-weight:800; color:#1a1200; background:var(--accent); border-radius:6px; padding:1px 6px; flex:none; }
 
 /* ---------- Edit mode (seat reorder / remove) ---------- */
 .edit-btn{ background:none; border:none; color:var(--accent); font-weight:800; font-size:15px; cursor:pointer; padding:6px 6px; border-radius:8px; }
@@ -488,3 +472,5 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 
 .seat-add{ min-width:42px; padding:0 8px; }
 .seat-add .icon{ stroke-width:2; }
+
+.note-from{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-faint); border:1px solid var(--border); border-radius:5px; padding:1px 5px; }
