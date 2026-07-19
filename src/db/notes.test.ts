@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName, setNoteText, rowNote } from './notes';
+import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName, setNoteText, rowNote, applyNoteEdit } from './notes';
 import type { Note } from '../types';
 
 const N = (text: string): Note => ({ t: '2026-07-11 12:00', text });
@@ -110,5 +110,16 @@ describe('rowNote (row note zone)', () => {
   });
   it('null when there are no notes', () => {
     expect(rowNote([])).toBeNull();
+  });
+});
+
+describe('applyNoteEdit (empty edit deletes)', () => {
+  const N = (text: string): Note => ({ t: 't', text });
+  it('clearing the text deletes that note', () => {
+    expect(applyNoteEdit([N('a'), N('b')], 0, '   ').map((n) => n.text)).toEqual(['b']);
+    expect(applyNoteEdit([N('only')], 0, '')).toEqual([]);
+  });
+  it('non-empty text updates in place', () => {
+    expect(applyNoteEdit([N('a'), N('b')], 1, ' new ').map((n) => n.text)).toEqual(['a', 'new']);
   });
 });

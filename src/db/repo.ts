@@ -9,7 +9,7 @@ import {
   nextButtonSeat,
 } from './stats';
 import { confirmExploit, cycleExploit, sameHandExploits } from './exploits';
-import { preserveCustomName, removeNoteAt, setNoteText, togglePin } from './notes';
+import { applyNoteEdit, preserveCustomName, removeNoteAt, togglePin } from './notes';
 import { tagStateAfter } from './tags';
 import {
   defaultSettings,
@@ -130,7 +130,7 @@ export async function deletePlayerNote(id: number, index: number): Promise<void>
 export async function updatePlayerNote(id: number, index: number, text: string): Promise<void> {
   const p = await db.players.get(id);
   if (!p) return;
-  await db.players.update(id, { notes: setNoteText(p.notes ?? [], index, text) });
+  await db.players.update(id, { notes: applyNoteEdit(p.notes ?? [], index, text) });
 }
 
 export async function togglePinnedNote(id: number, index: number): Promise<void> {

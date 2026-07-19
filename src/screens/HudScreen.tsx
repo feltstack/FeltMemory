@@ -420,12 +420,12 @@ function SeatList({ editing = false }: { editing?: boolean }) {
   };
 
   const saveNoteEdit = (playerId: number, idx: number) => {
+    // Empty text deletes the note; either way Save closes the panel.
     const t = editDraft.trim();
-    if (t) {
-      void repo.updatePlayerNote(playerId, idx, t);
-      toast('Note updated');
-    }
+    void repo.updatePlayerNote(playerId, idx, editDraft);
+    toast(t ? 'Note updated' : 'Note deleted');
     setEditNoteIdx(null);
+    setNoteSeat(null);
   };
 
   const addNoName = async (seatNo: number) => {

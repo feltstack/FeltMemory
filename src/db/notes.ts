@@ -64,3 +64,8 @@ export function rowNote(notes: Note[]): { text: string; index: number } | null {
   if (notes.length) return { text: notes[notes.length - 1].text, index: notes.length - 1 };
   return null;
 }
+
+/** Commit an inline note edit: empty text deletes the note, otherwise updates it. */
+export function applyNoteEdit(notes: Note[], index: number, text: string): Note[] {
+  return text.trim() ? setNoteText(notes, index, text) : removeNoteAt(notes, index);
+}
