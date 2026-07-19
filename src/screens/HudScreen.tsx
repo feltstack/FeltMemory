@@ -854,27 +854,21 @@ function PlayerCards() {
 
 function BlindToggles() {
   const { live, dispatch } = useApp();
+  type BlindKey = 'noSB' | 'straddle' | 'mustStraddle';
+  const chip = (key: BlindKey, label: string, title: string) => (
+    <button
+      className={`blind-chip ${live[key] ? 'on' : ''}`}
+      title={title}
+      onClick={() => dispatch({ type: 'TOGGLE', key })}
+    >
+      {label}
+    </button>
+  );
   return (
-    <div className="card" style={{ marginTop: 6 }}>
-      <div className="toggle-row">
-        <div>
-          <div className="label">No Small Blind Player</div>
-        </div>
-        <Switch on={live.noSB} onToggle={() => dispatch({ type: 'TOGGLE', key: 'noSB' })} />
-      </div>
-      <div className="toggle-row">
-        <div>
-          <div className="label">Straddle</div>
-        </div>
-        <Switch on={live.straddle} onToggle={() => dispatch({ type: 'TOGGLE', key: 'straddle' })} />
-      </div>
-      <div className="toggle-row">
-        <div>
-          <div className="label">Must Straddle</div>
-          <div className="sub">Keeps straddle on between hands</div>
-        </div>
-        <Switch on={live.mustStraddle} onToggle={() => dispatch({ type: 'TOGGLE', key: 'mustStraddle' })} />
-      </div>
+    <div className="blind-bar">
+      {chip('noSB', 'No SB', 'No small blind player this hand')}
+      {chip('straddle', 'Straddle', 'UTG straddle posted — acts last preflop')}
+      {chip('mustStraddle', 'Must STR', 'Keeps straddle on between hands')}
     </div>
   );
 }
