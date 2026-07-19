@@ -5,6 +5,14 @@ import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
 import { confidenceLabel, exploitLabel } from '../db/exploits';
+import {
+  DEFAULT_SESSION_KIND,
+  SESSION_KINDS,
+  parseVenueStakes,
+  sessionBadge,
+  stakesOptions,
+  type SessionKind,
+} from '../db/session-meta';
 import { orderedNotes, rowNote, toggleDeleteConfirm } from '../db/notes';
 import { isDefaultName, resolveRename } from '../db/names';
 import { abbrevAction, abbrevPos } from '../db/labels';
@@ -104,18 +112,27 @@ function SessionSetup() {
   const [venueChoice, setVenueChoice] = useState('');
   const [newVenue, setNewVenue] = useState('');
   const [stakes, setStakes] = useState('');
+  const [customStakes, setCustomStakes] = useState(false);
+  const [kind, setKind] = useState<SessionKind>(DEFAULT_SESSION_KIND);
+  const [isTest, setIsTest] = useState(false);
   const [tableSize, setTableSize] = useState(9);
   const [heroSeat, setHeroSeat] = useState(5);
   const [btnSeat, setBtnSeat] = useState(1);
 
   const venueName = venueChoice === '__new__' || venues.length === 0 ? newVenue.trim() : venueChoice;
 
+  // presets + every stake previously logged at any venue
+  const stakeChoices = useMemo(
+    () => stakesOptions(venues.flatMap((v) => parseVenueStakes(v.stakes))),
+    [venues],
+  );
+
   const start = async () => {
     if (!venueName) {
       toast('Pick or add a venue first');
       return;
     }
-    await startSession(venueName, stakes.trim() || '—', tableSize, Math.min(heroSeat, tableSize), Math.min(btnSeat, tableSize));
+    await startSession(venueName, stakes.trim() || '—', tableSize, Math.min(heroSeat, tableSize), Math.min(btnSeat, tableSize), kind, isTest);
   };
 
   const seatOptions = Array.from({ length: tableSize }, (_, i) => i + 1);
@@ -148,11 +165,71 @@ function SessionSetup() {
         </div>
         <div className="field">
           <label>Stakes</label>
-          <input
-            placeholder="e.g. $1/$3 NL Hold'em"
-            value={stakes}
-            onChange={(e) => setStakes(e.target.value)}
-          />
+          {!customStakes && (
+            <select
+              value={stakes}
+              onChange={(e) => {
+                if (e.target.value === '__custom__') {
+                  setCustomStakes(true);
+                  setStakes('');
+                } else setStakes(e.target.value);
+              }}
+            >
+              <option value="">— choose stakes —</option>
+              {stakeChoices.map((v) => (
+                <option key={v} value={v}>
+                  {v}
+                </option>
+              ))}
+              <option value="__custom__">＋ Custom…</option>
+            </select>
+          )}
+          {customStakes && (
+            <div className="stakes-custom">
+              <input
+                autoFocus
+                placeholder="e.g. $1/$3 NL Hold'em"
+                value={stakes}
+                onChange={(e) => setStakes(e.target.value)}
+              />
+              <button
+                className="btn ghost"
+                onClick={() => {
+                  setCustomStakes(false);
+                  setStakes('');
+                }}
+              >
+                List
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="field">
+          <label>Session type</label>
+          <div className="seg">
+            {SESSION_KINDS.map((k) => (
+              <button
+                key={k}
+                className={`seg-btn${kind === k ? ' on' : ''}`}
+                onClick={() => setKind(k)}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="field">
+          <button
+            className={`test-toggle${isTest ? ' on' : ''}`}
+            onClick={() => setIsTest(!isTest)}
+            aria-pressed={isTest}
+          >
+            <span className="test-box">{isTest ? '✓' : ''}</span>
+            <span className="test-label">
+              Test session
+              <span className="hint">Practice run — flagged so you can keep it out of your real data</span>
+            </span>
+          </button>
         </div>
         <div className="field-row">
           <div className="field">
@@ -248,7 +325,14 @@ function Felt({ btnMode, setBtnMode }: { btnMode: boolean; setBtnMode: (v: boole
         <Icon name="cards" />
       </div>
       <div className="felt-center">
-        <div className="stakes">{live.stakes}</div>
+        <div className="stakes">
+          {live.stakes}
+          {sessionBadge(live.kind ?? DEFAULT_SESSION_KIND, !!live.isTest) && (
+            <span className={`sess-badge${live.isTest ? ' test' : ''}`}>
+              {sessionBadge(live.kind ?? DEFAULT_SESSION_KIND, !!live.isTest)}
+            </span>
+          )}
+        </div>
         <div className="venue">
           {live.venueName} · Hand #{live.handNo}
         </div>
@@ -722,6 +806,9 @@ function PlayerCards() {
   const [collapsed, setCollapsed] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [cardEditKey, setCardEditKey] = useState<string | null>(null);
+  const [cardEditText, setCardEditText] = useState('');
+  const cardEditCancel = useRef(false);
 
   const cards = live.seats.filter((s) => !s.open && !s.hero && s.playerId != null);
   if (cards.length === 0) return null;
@@ -781,10 +868,44 @@ function PlayerCards() {
                         onClick={() => armed && setConfirmDel(null)}
                       >
                         <div className="pcard-note-body">
-                          <div className="pcard-note-text">
-                            {n.pinned && <span className="pin-flag">📌</span>}
-                            {n.text}
-                          </div>
+                          {cardEditKey === key ? (
+                            <input
+                              className="note-edit"
+                              autoFocus
+                              value={cardEditText}
+                              onChange={(e) => setCardEditText(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') e.currentTarget.blur();
+                                else if (e.key === 'Escape') {
+                                  cardEditCancel.current = true;
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              onBlur={() => {
+                                if (cardEditCancel.current) {
+                                  cardEditCancel.current = false;
+                                  setCardEditKey(null);
+                                  return;
+                                }
+                                void repo.updatePlayerNote(p.id!, orig, cardEditText);
+                                toast(cardEditText.trim() ? 'Note updated' : 'Note deleted');
+                                setCardEditKey(null);
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className="pcard-note-text"
+                              title="Double-click to edit"
+                              onDoubleClick={() => {
+                                setCardEditKey(key);
+                                setCardEditText(n.text);
+                              }}
+                            >
+                              {n.pinned && <span className="pin-flag">📌</span>}
+                              {n.text}
+                            </div>
+                          )}
                           <div className="note-meta">
                             <span className="ts">
                               {n.t}

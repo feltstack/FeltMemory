@@ -1,3 +1,5 @@
+import type { SessionKind } from './db/session-meta';
+
 /** Core domain types for FeltMemory. */
 
 /** Starting archetype taxonomy — user-extendable via Settings (stored in meta). */
@@ -93,6 +95,10 @@ export interface Session {
   id?: number;
   venueName: string;
   stakes: string;
+  /** Live (default) / Online / Home Game */
+  kind?: SessionKind;
+  /** practice run — excluded from stats views that opt out */
+  isTest?: boolean;
   startedAt: string; // ISO datetime
   endedAt: string | null;
   handCount: number;
@@ -141,6 +147,8 @@ export interface LiveState {
   sessionId: number | null;
   venueName: string;
   stakes: string;
+  kind?: SessionKind;
+  isTest?: boolean;
   tableSize: number;
   seats: Seat[];
   btnSeat: number;

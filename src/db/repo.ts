@@ -11,6 +11,7 @@ import {
 import { confirmExploit, cycleExploit, sameHandExploits } from './exploits';
 import { applyNoteEdit, preserveCustomName, removeNoteAt, togglePin } from './notes';
 import { tagStateAfter } from './tags';
+import { DEFAULT_SESSION_KIND, type SessionKind } from './session-meta';
 import {
   defaultSettings,
   emptyCounters,
@@ -209,11 +210,15 @@ export async function startSession(
   venueName: string,
   stakes: string,
   tableSize: number,
+  kind: SessionKind = DEFAULT_SESSION_KIND,
+  isTest = false,
 ): Promise<Session> {
   await upsertVenue(venueName, stakes);
   const s: Session = {
     venueName,
     stakes,
+    kind,
+    isTest,
     startedAt: new Date().toISOString(),
     endedAt: null,
     handCount: 0,

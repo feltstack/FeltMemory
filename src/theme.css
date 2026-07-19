@@ -506,3 +506,29 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
   border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;
   display:flex; align-items:center; justify-content:center; white-space:nowrap; }
 .blind-chip.on{ background:var(--accent); border-color:var(--accent); color:#1a1200; }
+
+/* inline note edit (double-click a note in the card/sheet) */
+.note-edit{ width:100%; box-sizing:border-box; background:var(--surface); border:1px solid var(--accent);
+  border-radius:6px; color:var(--text); font-size:13px; padding:6px 8px; }
+.note-edit:focus{ outline:none; }
+
+/* start screen: custom stakes, session type segmented control, test toggle */
+.stakes-custom{ display:flex; gap:8px; align-items:center; }
+.stakes-custom input{ flex:1; min-width:0; }
+.seg{ display:flex; gap:6px; }
+.seg-btn{ flex:1; padding:9px 6px; border-radius:8px; border:1px solid var(--line);
+  background:var(--surface); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; }
+.seg-btn.on{ border-color:var(--accent); color:var(--text); background:rgba(230,130,15,.14); }
+.test-toggle{ display:flex; gap:10px; align-items:flex-start; width:100%; text-align:left;
+  padding:10px; border-radius:8px; border:1px solid var(--line); background:var(--surface);
+  color:var(--text); cursor:pointer; }
+.test-toggle.on{ border-color:var(--accent); background:rgba(230,130,15,.10); }
+.test-box{ flex:none; width:20px; height:20px; border-radius:5px; border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900;
+  color:var(--accent); background:var(--bg); }
+.test-toggle.on .test-box{ border-color:var(--accent); }
+.test-label{ display:flex; flex-direction:column; gap:2px; font-size:13px; font-weight:600; }
+.test-label .hint{ font-weight:400; }
+.sess-badge{ margin-left:8px; padding:2px 6px; border-radius:5px; font-size:9px; font-weight:800;
+  letter-spacing:.06em; border:1px solid var(--line); color:var(--muted); vertical-align:middle; }
+.sess-badge.test{ border-color:var(--accent); color:var(--accent); }

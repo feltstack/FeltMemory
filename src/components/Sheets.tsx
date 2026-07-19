@@ -1,5 +1,5 @@
 /** Bottom sheets: player detail (tag/read-tracking/notes) + assign-to-seat. */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
@@ -66,6 +66,9 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   const [nameDraft, setNameDraft] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [confirmDel, setConfirmDel] = useState<number | null>(null);
+  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [editText, setEditText] = useState('');
+  const editCancel = useRef(false);
 
   const seat = seatNo != null ? live.seats.find((s) => s.seatNo === seatNo) : undefined;
   const allTags = useMemo(() => {
@@ -170,10 +173,44 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
               onClick={() => armed && setConfirmDel(null)}
             >
               <div className="note-item-body">
-                <div className="note-text">
-                  {n.pinned && <span className="pin-flag">📌</span>}
-                  {n.text}
-                </div>
+                {editIdx === orig ? (
+                  <input
+                    className="note-edit"
+                    autoFocus
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') e.currentTarget.blur();
+                      else if (e.key === 'Escape') {
+                        editCancel.current = true;
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editCancel.current) {
+                        editCancel.current = false;
+                        setEditIdx(null);
+                        return;
+                      }
+                      void repo.updatePlayerNote(playerId, orig, editText);
+                      toast(editText.trim() ? 'Note updated' : 'Note deleted');
+                      setEditIdx(null);
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="note-text"
+                    title="Double-click to edit"
+                    onDoubleClick={() => {
+                      setEditIdx(orig);
+                      setEditText(n.text);
+                    }}
+                  >
+                    {n.pinned && <span className="pin-flag">📌</span>}
+                    {n.text}
+                  </div>
+                )}
                 <div className="note-meta">
                   <span className="ts">
                     {n.t}

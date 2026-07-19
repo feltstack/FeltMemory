@@ -13,6 +13,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { DEFAULT_SESSION_KIND, type SessionKind } from '../db/session-meta';
 import {
   applyTap,
   assignPositions,
@@ -259,7 +260,7 @@ interface AppCtx {
   sessionActive: boolean;
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
-  startSession: (venue: string, stakes: string, tableSize: number, heroSeat: number, btnSeat: number) => Promise<void>;
+  startSession: (venue: string, stakes: string, tableSize: number, heroSeat: number, btnSeat: number, kind?: SessionKind, isTest?: boolean) => Promise<void>;
   endSession: () => Promise<void>;
   saveHand: () => Promise<void>;
 }
@@ -308,13 +309,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startSession = useCallback(
-    async (venue: string, stakes: string, tableSize: number, heroSeat: number, btnSeat: number) => {
-      const session = await repo.startSession(venue, stakes, tableSize);
+    async (
+      venue: string,
+      stakes: string,
+      tableSize: number,
+      heroSeat: number,
+      btnSeat: number,
+      kind: SessionKind = DEFAULT_SESSION_KIND,
+      isTest = false,
+    ) => {
+      const session = await repo.startSession(venue, stakes, tableSize, kind, isTest);
       const liveNext: LiveState = {
         ...emptyLive(),
         sessionId: session.id!,
         venueName: venue,
         stakes,
+        kind,
+        isTest,
         tableSize,
         heroSeat,
         btnSeat,
