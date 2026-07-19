@@ -5,8 +5,8 @@ import { db } from '../db/db';
 import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
 import { confidenceLabel, exploitLabel } from '../db/exploits';
-import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
-import { isDefaultName, resolveRename, rowDisplay } from '../db/names';
+import { orderedNotes, rowNote, toggleDeleteConfirm } from '../db/notes';
+import { isDefaultName, resolveRename } from '../db/names';
 import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
@@ -315,7 +315,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
   const compact = settings.compactRows !== false;
   const { openPlayer, openAssign, toast } = useUi();
   const playersById = useSeatedPlayers();
-  // Inline quick-note editor: 📝 on a row opens an input right under it —
+  // Inline note editor: tapping a row's note zone opens it right under the row —
   // no popup, autofocused, Enter saves, Esc closes.
   const [noteSeat, setNoteSeat] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
@@ -451,7 +451,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
               ref={setRowRef(s.seatNo)}
             >
               <RmBtn seatNo={s.seatNo} hero={false} />
-              <div className="badge">{s.seatNo}</div>
+              <span className="sr-seat">{s.seatNo}</span>
               <div className="row-main">
                 <div className="row-name">Open Seat</div>
               </div>
@@ -487,19 +487,18 @@ function SeatList({ editing = false }: { editing?: boolean }) {
         const c = p?.counters;
         const ring = p?.tag ? tagColor(p.tag, settings.tags) : undefined;
         const badge = pendingBadge(live.currentEntries, s.seatNo);
-        const disp = rowDisplay(p?.name ?? '?', p?.notes ?? []);
-        const displayName = s.hero ? 'Hero' : disp.text;
+        const rn = rowNote(p?.notes ?? []);
         return (
           <div key={s.seatNo}>
           <div
             className={rowClass(s.seatNo, s.sittingOut ? 'seat-row sitting-out' : 'seat-row')}
             ref={setRowRef(s.seatNo)}
+            style={{ borderLeftColor: s.hero ? 'var(--accent)' : ring ?? 'transparent' }}
           >
             <RmBtn seatNo={s.seatNo} hero={s.hero} />
-            <div
-              className={`badge ${s.hero ? 'hero' : ''}`}
-              style={ring && !s.hero ? { borderColor: ring } : undefined}
-              title={s.hero ? '' : 'Open player card'}
+            <button
+              className="sr-seat"
+              title="Open player card"
               onClick={(e) => {
                 e.stopPropagation();
                 if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
@@ -507,7 +506,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
               }}
             >
               {s.seatNo}
-            </div>
+            </button>
             {renameSeat === s.seatNo && s.playerId != null ? (
               <input
                 className="sr-rename"
@@ -534,27 +533,40 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                 }}
               />
             ) : (
-              <div
+              <button
                 className="sr-name"
+                title={s.hero ? '' : 'Tap to rename'}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (s.hero) {
-                    toast("That's you — Hero isn't tracked like an opponent");
-                    return;
-                  }
+                  if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
+                  else if (s.playerId != null) startRename(s.seatNo, p?.name ?? '');
+                }}
+              >
+                {s.hero ? 'Hero' : p?.name ?? '?'}
+              </button>
+            )}
+            {badge && <span className="pending-chip">{badge}</span>}
+            {s.hero ? (
+              <span className="sr-note" />
+            ) : (
+              <button
+                className="sr-note"
+                title="Tap to edit notes"
+                onClick={(e) => {
+                  e.stopPropagation();
                   if (s.playerId == null) return;
-                  if (disp.kind === 'note' && disp.noteIndex != null) {
-                    setNoteSeat(s.seatNo);
-                    setEditNoteIdx(disp.noteIndex);
-                    setEditDraft(disp.text);
+                  setNoteSeat(s.seatNo);
+                  if (rn) {
+                    setEditNoteIdx(rn.index);
+                    setEditDraft(rn.text);
                   } else {
-                    startRename(s.seatNo, p?.name ?? '');
+                    setEditNoteIdx(null);
+                    setNoteDraft('');
                   }
                 }}
               >
-                <span className="row-name">{displayName}</span>
-                {badge && <span className="pending-chip">{badge}</span>}
-              </div>
+                {rn ? rn.text : <span className="sr-note-ph">＋ note</span>}
+              </button>
             )}
             <div className="sr-pill">
               <span>{s.hero ? '–' : fmt(pct(c?.vpip ?? 0, c?.dealt ?? 0))}</span>
@@ -600,20 +612,6 @@ function SeatList({ editing = false }: { editing?: boolean }) {
               >
                 {compact ? abbrevAction('Raise') : 'Raise'}
               </button>
-              {!s.hero && s.playerId != null && (
-                <button
-                  className={`mini-btn ${noteSeat === s.seatNo ? 'tapped' : ''}`}
-                  title="Quick note — types right here, no popup"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setNoteDraft('');
-                    setEditNoteIdx(null);
-                    setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
-                  }}
-                >
-                  📝
-                </button>
-              )}
             </div>
             <Handle seatNo={s.seatNo} />
           </div>

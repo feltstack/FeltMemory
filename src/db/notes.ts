@@ -56,3 +56,11 @@ export function setNoteText(notes: Note[], index: number, text: string): Note[] 
   if (!t) return notes;
   return notes.map((n, i) => (i === index ? { ...n, text: t } : n));
 }
+
+/** The note shown in a row's note zone: pinned if any, else the latest. */
+export function rowNote(notes: Note[]): { text: string; index: number } | null {
+  const pi = notes.findIndex((n) => n.pinned);
+  if (pi >= 0) return { text: notes[pi].text, index: pi };
+  if (notes.length) return { text: notes[notes.length - 1].text, index: notes.length - 1 };
+  return null;
+}

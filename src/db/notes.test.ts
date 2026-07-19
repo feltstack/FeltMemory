@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName, setNoteText } from './notes';
+import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName, setNoteText, rowNote } from './notes';
 import type { Note } from '../types';
 
 const N = (text: string): Note => ({ t: '2026-07-11 12:00', text });
@@ -97,5 +97,18 @@ describe('setNoteText', () => {
   it('empty text is a no-op', () => {
     const notes = [N('a')];
     expect(setNoteText(notes, 0, '   ')).toEqual(notes);
+  });
+});
+
+describe('rowNote (row note zone)', () => {
+  const N = (text: string, opts: Partial<Note> = {}): Note => ({ t: 't', text, ...opts });
+  it('prefers the pinned note and reports its index', () => {
+    expect(rowNote([N('a'), N('PIN', { pinned: true }), N('c')])).toEqual({ text: 'PIN', index: 1 });
+  });
+  it('falls back to the latest note', () => {
+    expect(rowNote([N('a'), N('latest')])).toEqual({ text: 'latest', index: 1 });
+  });
+  it('null when there are no notes', () => {
+    expect(rowNote([])).toBeNull();
   });
 });
