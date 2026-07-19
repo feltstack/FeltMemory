@@ -232,8 +232,8 @@ export async function startSession(
   return s;
 }
 
-export async function endSession(sessionId: number): Promise<void> {
-  await db.sessions.update(sessionId, { endedAt: new Date().toISOString() });
+export async function endSession(sessionId: number, breakMs = 0): Promise<void> {
+  await db.sessions.update(sessionId, { endedAt: new Date().toISOString(), breakMs });
 }
 
 /* ---------------- hand commit (the core transaction) ---------------- */

@@ -218,3 +218,17 @@ describe('fmtDuration', () => {
     expect(fmtDuration('nonsense', null)).toBe('—');
   });
 });
+
+describe('fmtDuration excludes break time', () => {
+  it('subtracts breaks from the session length', () => {
+    expect(fmtDuration('2026-07-19T18:00:00Z', '2026-07-19T21:00:00Z', Date.now(), 30 * 60000)).toBe(
+      '2h 30m',
+    );
+  });
+
+  it('never goes negative on a bad break total', () => {
+    expect(fmtDuration('2026-07-19T18:00:00Z', '2026-07-19T18:30:00Z', Date.now(), 999 * 60000)).toBe(
+      '0m',
+    );
+  });
+});

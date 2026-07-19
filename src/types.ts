@@ -104,6 +104,8 @@ export interface Session {
   startedAt: string; // ISO datetime
   endedAt: string | null;
   handCount: number;
+  /** total ms spent on breaks (excluded from session duration) */
+  breakMs?: number;
   tableSize: number;
   /** players already counted toward sessions/venue tallies this session */
   playerIds: number[];
@@ -154,6 +156,10 @@ export interface LiveState {
   stakes: string;
   kind?: SessionKind;
   isTest?: boolean;
+  /** break clock — see db/breaks.ts */
+  pausedAt?: string | null;
+  breakMs?: number;
+  breakMins?: number | null;
   tableSize: number;
   seats: Seat[];
   btnSeat: number;

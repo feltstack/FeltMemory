@@ -1,6 +1,15 @@
 /** App shell: topbar, tab bar / sidebar (900px breakpoint), FAB, sheets, toast. */
 import { useEffect, useState } from 'react';
 import { useApp } from './state/AppContext';
+import {
+  BREAK_PRESETS,
+  breakElapsedMs,
+  breakRemainingMs,
+  fmtClock,
+  isPaused,
+  parseBreakMins,
+  playedMs,
+} from './db/breaks';
 import { useUi } from './state/UiContext';
 import { Icon } from './components/Icons';
 import { SheetHost } from './components/Sheets';
@@ -31,10 +40,70 @@ const TITLES: Record<ScreenKey, string> = {
   settings: 'Settings',
 };
 
+function BreakDialog({
+  onStart,
+  onCancel,
+}: {
+  onStart: (mins: number | null) => void;
+  onCancel: () => void;
+}) {
+  const [custom, setCustom] = useState('');
+  const customMins = parseBreakMins(custom);
+
+  return (
+    <div className="modal-backdrop" onClick={onCancel}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-title">Session paused</div>
+        <div className="hint modal-sub">
+          The timer stops while you're away. Set a break length and you'll get a countdown —
+          or skip it and resume whenever you sit back down.
+        </div>
+        <div className="break-presets">
+          {BREAK_PRESETS.map((m) => (
+            <button key={m} className="break-preset" onClick={() => onStart(m)}>
+              {m} min
+            </button>
+          ))}
+        </div>
+        <div className="break-custom">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={600}
+            placeholder="Minutes"
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && customMins != null) onStart(customMins);
+            }}
+          />
+          <button
+            className="btn primary"
+            disabled={customMins == null}
+            onClick={() => customMins != null && onStart(customMins)}
+          >
+            Set
+          </button>
+        </div>
+        <div className="modal-actions">
+          <button className="btn ghost" onClick={() => onStart(null)}>
+            No timer
+          </button>
+          <button className="btn ghost" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SessionMeta() {
-  const { live, sessionActive, endSession, saveHand } = useApp();
+  const { live, sessionActive, endSession, saveHand, pauseSession, resumeSession } = useApp();
   const { toast } = useUi();
   const [, tick] = useState(0);
+  const [askBreak, setAskBreak] = useState(false);
 
   useEffect(() => {
     const id = window.setInterval(() => tick((n) => n + 1), 1000);
@@ -42,15 +111,49 @@ function SessionMeta() {
   }, []);
 
   if (!sessionActive || !live.startedAt) return null;
-  const secs = Math.max(0, Math.floor((Date.now() - new Date(live.startedAt).getTime()) / 1000));
+  const paused = isPaused(live);
+  const secs = Math.floor(playedMs(live.startedAt, null, live) / 1000);
   const h = Math.floor(secs / 3600);
   const m = Math.floor((secs % 3600) / 60);
+  const left = breakRemainingMs(live);
+  const over = left != null && left <= 0;
 
   return (
-    <div className="session-meta">
+    <div className={`session-meta${paused ? ' paused' : ''}`}>
+      {askBreak && (
+        <BreakDialog
+          onStart={(mins) => {
+            pauseSession(mins);
+            setAskBreak(false);
+            toast(mins ? `On break — back in ${mins} min` : 'On break');
+          }}
+          onCancel={() => setAskBreak(false)}
+        />
+      )}
       <span className="pill">{live.stakes}</span>
       <span className="pill">{live.venueName}</span>
       <span className="pill timer">⏱ {h}h {m}m</span>
+      <button
+        className={`pill break-btn${paused ? ' on' : ''}`}
+        onClick={() => {
+          if (paused) {
+            resumeSession();
+            toast('Back in action');
+          } else setAskBreak(true);
+        }}
+        title={paused ? 'Resume the session' : 'Pause for a break'}
+      >
+        {paused ? '▶ Resume' : '⏸ Pause'}
+      </button>
+      {paused && (
+        <span className={`pill break-clock${over ? ' over' : ''}`}>
+          {left == null
+            ? `on break ${fmtClock(breakElapsedMs(live))}`
+            : over
+              ? `over by ${fmtClock(left)}`
+              : `back in ${fmtClock(left)}`}
+        </span>
+      )}
       <span className="pill">Hand #{live.handNo}</span>
       <button
         className="pill end-btn"

@@ -40,9 +40,11 @@ function useSeatedPlayers(): Map<number, Player> {
 }
 
 export default function HudScreen() {
-  const { sessionActive, settings } = useApp();
+  const { sessionActive } = useApp();
   const { editMode } = useUi();
-  const [view, setView] = useState<'table' | 'list'>(settings.defaultView);
+  // Table view is hidden for now (v0.2.21) — the felt renderer stays in the tree so
+  // it can be switched back on without a rebuild of this screen.
+  const view = 'list' as 'table' | 'list';
   const [btnMode, setBtnMode] = useState(false);
   const [wide, setWide] = useState(window.innerWidth >= 900);
 
@@ -59,16 +61,6 @@ export default function HudScreen() {
   const showCompanion = wide && effectiveView === 'table' && !editMode;
   return (
     <div className="screen">
-      {!editMode && (
-        <div className="segmented" style={{ marginBottom: 14 }}>
-          <button className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>
-            List view
-          </button>
-          <button className={view === 'table' ? 'active' : ''} onClick={() => setView('table')}>
-            Table view
-          </button>
-        </div>
-      )}
       {editMode && (
         <div className="edit-hint">Drag ≡ to reorder · tap − to remove a seat · Done when finished</div>
       )}

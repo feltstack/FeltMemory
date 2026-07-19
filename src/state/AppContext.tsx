@@ -14,6 +14,7 @@ import {
   type ReactNode,
 } from 'react';
 import { DEFAULT_SESSION_KIND, type SessionKind } from '../db/session-meta';
+import { pauseAt, resumeFrom } from '../db/breaks';
 import {
   applyTap,
   assignPositions,
@@ -88,6 +89,8 @@ type Action =
   | { type: 'TAP'; seatNo: number; playerId: number | null; action: 'call' | 'raise' }
   | { type: 'UNDO_TAP' }
   | { type: 'CLEAR_HAND' }
+  | { type: 'PAUSE'; mins: number | null }
+  | { type: 'RESUME' }
   | { type: 'HAND_COMMITTED'; nextBtn: number };
 
 function withPositions(live: LiveState): LiveState {
@@ -229,6 +232,10 @@ function reducer(live: LiveState, a: Action): LiveState {
       const next = { ...live, [a.key]: !live[a.key] } as LiveState;
       return a.key === 'noSB' || a.key === 'straddle' ? withPositions(next) : next;
     }
+    case 'PAUSE':
+      return { ...live, ...pauseAt(a.mins) };
+    case 'RESUME':
+      return { ...live, ...resumeFrom(live) };
     case 'TAP':
       return {
         ...live,
@@ -261,6 +268,8 @@ interface AppCtx {
   settings: Settings;
   updateSettings: (patch: Partial<Settings>) => void;
   startSession: (venue: string, stakes: string, tableSize: number, heroSeat: number, btnSeat: number, kind?: SessionKind, isTest?: boolean) => Promise<void>;
+  pauseSession: (mins: number | null) => void;
+  resumeSession: () => void;
   endSession: () => Promise<void>;
   saveHand: () => Promise<void>;
 }
@@ -337,8 +346,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const pauseSession = useCallback((mins: number | null) => dispatch({ type: 'PAUSE', mins }), []);
+  const resumeSession = useCallback(() => dispatch({ type: 'RESUME' }), []);
+
   const endSession = useCallback(async () => {
-    if (live.sessionId) await repo.endSession(live.sessionId);
+    if (live.sessionId) {
+      const finished = resumeFrom(live); // close any break still open
+      await repo.endSession(live.sessionId, finished.breakMs ?? 0);
+    }
     await repo.saveLiveState(null);
     dispatch({ type: 'SESSION_ENDED' });
   }, [live.sessionId]);
@@ -362,6 +377,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     settings,
     updateSettings,
     startSession,
+    pauseSession,
+    resumeSession,
     endSession,
     saveHand,
   };

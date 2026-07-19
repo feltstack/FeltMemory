@@ -161,12 +161,17 @@ export function sessionNotes(
   });
 }
 
-/** "2h 41m" / "48m" / "—" while a session is still open with no elapsed time. */
-export function fmtDuration(startedAt: string, endedAt: string | null, now = Date.now()): string {
+/** "2h 41m" / "48m" — playing time, with break time excluded. */
+export function fmtDuration(
+  startedAt: string,
+  endedAt: string | null,
+  now = Date.now(),
+  breakMs = 0,
+): string {
   const start = Date.parse(startedAt);
   const end = endedAt ? Date.parse(endedAt) : now;
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return '—';
-  const mins = Math.floor((end - start) / 60000);
+  const mins = Math.floor(Math.max(0, end - start - breakMs) / 60000);
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return h ? `${h}h ${m}m` : `${m}m`;

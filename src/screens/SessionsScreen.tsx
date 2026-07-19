@@ -68,7 +68,7 @@ function SessionDetail({
         {badge && <span className={`sess-badge${session.isTest ? ' test' : ''}`}>{badge}</span>}
       </div>
       <div className="hint sess-sub">
-        {session.stakes} · {fmtDuration(session.startedAt, session.endedAt)} ·{' '}
+        {session.stakes} · {fmtDuration(session.startedAt, session.endedAt, Date.now(), session.breakMs ?? 0)} ·{' '}
         {fold.handsFolded} hands · {rows.length} opponents
         {fold.approxHands > 0 && (
           <span className="warn-note">
@@ -150,7 +150,7 @@ function SessionRow({
         </div>
       </div>
       <div className="sess-meta">
-        <span>{fmtDuration(session.startedAt, session.endedAt)}</span>
+        <span>{fmtDuration(session.startedAt, session.endedAt, Date.now(), session.breakMs ?? 0)}</span>
         <span>{fold.handsFolded} hands</span>
         <span>
           {avg.players} opponent{avg.players === 1 ? '' : 's'}
