@@ -6,7 +6,7 @@ import * as repo from '../db/repo';
 import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
 import { confidenceLabel, exploitLabel } from '../db/exploits';
 import { orderedNotes, toggleDeleteConfirm } from '../db/notes';
-import { isDefaultName, resolveRename, rowDisplayName } from '../db/names';
+import { isDefaultName, resolveRename, rowDisplay } from '../db/names';
 import { abbrevAction, abbrevPos } from '../db/labels';
 import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
@@ -319,6 +319,8 @@ function SeatList({ editing = false }: { editing?: boolean }) {
   // no popup, autofocused, Enter saves, Esc closes.
   const [noteSeat, setNoteSeat] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [editNoteIdx, setEditNoteIdx] = useState<number | null>(null);
+  const [editDraft, setEditDraft] = useState('');
   const [renameSeat, setRenameSeat] = useState<number | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const renameCancel = useRef(false);
@@ -417,6 +419,15 @@ function SeatList({ editing = false }: { editing?: boolean }) {
     setNoteSeat(null);
   };
 
+  const saveNoteEdit = (playerId: number, idx: number) => {
+    const t = editDraft.trim();
+    if (t) {
+      void repo.updatePlayerNote(playerId, idx, t);
+      toast('Note updated');
+    }
+    setEditNoteIdx(null);
+  };
+
   const addNoName = async (seatNo: number) => {
     const [np] = await repo.createNoNamePlayers(1);
     if (np?.id != null) {
@@ -476,7 +487,8 @@ function SeatList({ editing = false }: { editing?: boolean }) {
         const c = p?.counters;
         const ring = p?.tag ? tagColor(p.tag, settings.tags) : undefined;
         const badge = pendingBadge(live.currentEntries, s.seatNo);
-        const displayName = s.hero ? 'Hero' : rowDisplayName(p?.name ?? '?', p?.notes ?? []);
+        const disp = rowDisplay(p?.name ?? '?', p?.notes ?? []);
+        const displayName = s.hero ? 'Hero' : disp.text;
         return (
           <div key={s.seatNo}>
           <div
@@ -526,8 +538,18 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                 className="sr-name"
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (s.hero) toast("That's you — Hero isn't tracked like an opponent");
-                  else if (s.playerId != null) startRename(s.seatNo, p?.name ?? '');
+                  if (s.hero) {
+                    toast("That's you — Hero isn't tracked like an opponent");
+                    return;
+                  }
+                  if (s.playerId == null) return;
+                  if (disp.kind === 'note' && disp.noteIndex != null) {
+                    setNoteSeat(s.seatNo);
+                    setEditNoteIdx(disp.noteIndex);
+                    setEditDraft(disp.text);
+                  } else {
+                    startRename(s.seatNo, p?.name ?? '');
+                  }
                 }}
               >
                 <span className="row-name">{displayName}</span>
@@ -585,6 +607,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     setNoteDraft('');
+                    setEditNoteIdx(null);
                     setNoteSeat(noteSeat === s.seatNo ? null : s.seatNo);
                   }}
                 >
@@ -594,24 +617,58 @@ function SeatList({ editing = false }: { editing?: boolean }) {
             </div>
             <Handle seatNo={s.seatNo} />
           </div>
-          {noteSeat === s.seatNo && s.playerId != null && (
-            <div className="quick-note">
-              <input
-                autoFocus
-                value={noteDraft}
-                placeholder={`Note on ${p?.name ?? 'player'}… Enter saves, Esc closes`}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveQuickNote(s.playerId!, p?.name ?? 'player');
-                  if (e.key === 'Escape') setNoteSeat(null);
-                }}
-              />
-              <button
-                className="mini-btn enabled"
-                onClick={() => saveQuickNote(s.playerId!, p?.name ?? 'player')}
-              >
-                Save
-              </button>
+          {noteSeat === s.seatNo && s.playerId != null && p && (
+            <div className="note-panel">
+              {orderedNotes(p.notes ?? []).map(({ note: n, index: idx }) =>
+                editNoteIdx === idx ? (
+                  <div className="np-row" key={idx}>
+                    <input
+                      autoFocus
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveNoteEdit(s.playerId!, idx);
+                        if (e.key === 'Escape') setEditNoteIdx(null);
+                      }}
+                    />
+                    <button
+                      className="mini-btn enabled"
+                      onClick={() => saveNoteEdit(s.playerId!, idx)}
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="np-note"
+                    key={idx}
+                    onClick={() => {
+                      setEditNoteIdx(idx);
+                      setEditDraft(n.text);
+                    }}
+                  >
+                    {n.pinned ? '📌 ' : ''}
+                    {n.text}
+                  </button>
+                ),
+              )}
+              <div className="np-row">
+                <input
+                  value={noteDraft}
+                  placeholder="Add a note… Enter saves"
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveQuickNote(s.playerId!, p?.name ?? 'player');
+                    if (e.key === 'Escape') setNoteSeat(null);
+                  }}
+                />
+                <button
+                  className="mini-btn enabled"
+                  onClick={() => saveQuickNote(s.playerId!, p?.name ?? 'player')}
+                >
+                  Add
+                </button>
+              </div>
             </div>
           )}
           </div>

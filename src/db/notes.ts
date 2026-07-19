@@ -49,3 +49,10 @@ export function preserveCustomName(notes: Note[], name: string, stamp: string): 
   if (notes.some((n) => n.fromName && n.text === name)) return notes; // once only
   return [...notes, { t: stamp, text: name, fromName: true }];
 }
+
+/** Edit a note's text in place. Empty text is a no-op (use delete to remove). */
+export function setNoteText(notes: Note[], index: number, text: string): Note[] {
+  const t = text.trim();
+  if (!t) return notes;
+  return notes.map((n, i) => (i === index ? { ...n, text: t } : n));
+}

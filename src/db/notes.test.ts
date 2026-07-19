@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName } from './notes';
+import { removeNoteAt, toggleDeleteConfirm, togglePin, orderedNotes, preserveCustomName, setNoteText } from './notes';
 import type { Note } from '../types';
 
 const N = (text: string): Note => ({ t: '2026-07-11 12:00', text });
@@ -81,5 +81,21 @@ describe('preserveCustomName (name→note, once-only)', () => {
   });
   it('no-op when nothing is pinned', () => {
     expect(preserveCustomName([N('a read')], 'KoleStaley', 'ts')).toHaveLength(1);
+  });
+});
+
+describe('setNoteText', () => {
+  const N = (text: string): Note => ({ t: 't', text });
+  it('edits only the indexed note and trims', () => {
+    const out = setNoteText([N('a'), N('b')], 1, '  edited ');
+    expect(out.map((n) => n.text)).toEqual(['a', 'edited']);
+  });
+  it('keeps other fields (pin/hand) intact', () => {
+    const out = setNoteText([{ t: 't', text: 'x', pinned: true, h: 4 }], 0, 'y');
+    expect(out[0]).toEqual({ t: 't', text: 'y', pinned: true, h: 4 });
+  });
+  it('empty text is a no-op', () => {
+    const notes = [N('a')];
+    expect(setNoteText(notes, 0, '   ')).toEqual(notes);
   });
 });

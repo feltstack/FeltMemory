@@ -22,10 +22,19 @@ export function resolveRename(
  *   a) pinned note text · b) custom name · c) latest note (if name is default) · d) default name.
  * The sheet/card still title the record by its real name.
  */
+export function rowDisplay(
+  name: string,
+  notes: Note[],
+): { text: string; kind: 'note' | 'name'; noteIndex: number | null } {
+  const pinnedIdx = notes.findIndex((n) => n.pinned);
+  if (pinnedIdx >= 0) return { text: notes[pinnedIdx].text, kind: 'note', noteIndex: pinnedIdx };
+  if (!isDefaultName(name)) return { text: name, kind: 'name', noteIndex: null };
+  if (notes.length) {
+    return { text: notes[notes.length - 1].text, kind: 'note', noteIndex: notes.length - 1 };
+  }
+  return { text: name, kind: 'name', noteIndex: null };
+}
+
 export function rowDisplayName(name: string, notes: Note[]): string {
-  const pinned = notes.find((n) => n.pinned);
-  if (pinned) return pinned.text;
-  if (!isDefaultName(name)) return name;
-  const latest = notes.length ? notes[notes.length - 1].text : '';
-  return latest || name;
+  return rowDisplay(name, notes).text;
 }

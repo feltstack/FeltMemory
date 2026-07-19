@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDefaultName, resolveRename, rowDisplayName } from './names';
+import { isDefaultName, resolveRename, rowDisplayName, rowDisplay } from './names';
 import type { Note } from '../types';
 
 describe('isDefaultName (select-all rule)', () => {
@@ -39,5 +39,23 @@ describe('rowDisplayName priority', () => {
   });
   it('d) default name → default when no notes', () => {
     expect(rowDisplayName('No Name 3', [])).toBe('No Name 3');
+  });
+});
+
+describe('rowDisplay (what the tap should edit)', () => {
+  const N = (text: string, opts: Partial<Note> = {}): Note => ({ t: 't', text, ...opts });
+  it('pinned note → edits that note, with its index', () => {
+    const r = rowDisplay('KoleStaley', [N('a'), N('PIN', { pinned: true })]);
+    expect(r).toEqual({ text: 'PIN', kind: 'note', noteIndex: 1 });
+  });
+  it('custom name → edits the name', () => {
+    expect(rowDisplay('KoleStaley', [N('a')])).toEqual({ text: 'KoleStaley', kind: 'name', noteIndex: null });
+  });
+  it('default name with notes → edits the latest note', () => {
+    const r = rowDisplay('No Name 3', [N('first'), N('latest')]);
+    expect(r).toEqual({ text: 'latest', kind: 'note', noteIndex: 1 });
+  });
+  it('default name, no notes → edits the name', () => {
+    expect(rowDisplay('No Name 3', [])).toEqual({ text: 'No Name 3', kind: 'name', noteIndex: null });
   });
 });
