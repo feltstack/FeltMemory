@@ -33,6 +33,8 @@ export interface Note {
   pinned?: boolean; // at most one pinned note per player
   exploits?: { tag: string; level: 1 | 2 }[]; // snapshot: exploits changed the same hand
   fromName?: boolean; // auto-created to preserve a custom name a pin now hides
+  sid?: number; // session this note was taken in (session-scoped views)
+  sh?: number; // session hand # when it was taken (orders notes within a session)
 }
 
 /**
@@ -129,6 +131,9 @@ export interface HandRecord {
   straddle: boolean;
   entries: HandEntry[];
   dealtPlayerIds: number[];
+  /** Seat snapshot at commit time. Required to REPLAY the hand: acting order and
+   *  3-bet opportunities depend on who sat where, which entries alone can't give. */
+  seats?: Seat[];
 }
 
 export interface Seat {

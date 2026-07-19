@@ -497,7 +497,7 @@ function SeatList({ editing = false }: { editing?: boolean }) {
       setNoteSeat(null);
       return;
     }
-    void repo.addPlayerNote(playerId, text, live.handNo);
+    void repo.addPlayerNote(playerId, text, live.handNo, live.sessionId);
     toast(`Note saved on ${name}`);
     setNoteDraft('');
     setNoteSeat(null);
@@ -817,7 +817,7 @@ function PlayerCards() {
   const saveNote = (pid: number, name: string) => {
     const text = (drafts[pid] ?? '').trim();
     if (!text) return;
-    void repo.addPlayerNote(pid, text, live.handNo);
+    void repo.addPlayerNote(pid, text, live.handNo, live.sessionId);
     setDraft(pid, '');
     toast(`Note saved on ${name}`);
   };

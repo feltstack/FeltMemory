@@ -91,6 +91,7 @@ export async function addPlayerNote(
   id: number,
   text: string,
   handNo?: number,
+  sessionId?: number | null,
 ): Promise<void> {
   const p = await db.players.get(id);
   if (!p) return;
@@ -98,6 +99,8 @@ export async function addPlayerNote(
   // one in progress) — shown on the note's date line, not mixed into the text.
   const h = (p.counters?.dealt ?? 0) + 1;
   const note: Note = { t: nowStamp(), text, h };
+  if (sessionId != null) note.sid = sessionId;
+  if (handNo != null) note.sh = handNo;
   // Snapshot exploits changed the SAME session hand (frozen — later edits don't rewrite it).
   if (handNo != null) {
     const snap = sameHandExploits(p.exploits ?? [], handNo);
@@ -291,6 +294,7 @@ export async function commitHand(live: LiveState): Promise<number> {
       straddle: live.straddle,
       entries: live.currentEntries,
       dealtPlayerIds: [...deltas.keys()],
+      seats: live.seats.map((x) => ({ ...x })),
     };
     await db.hands.add(rec);
   });

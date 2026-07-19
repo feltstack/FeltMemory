@@ -532,3 +532,40 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .sess-badge{ margin-left:8px; padding:2px 6px; border-radius:5px; font-size:9px; font-weight:800;
   letter-spacing:.06em; border:1px solid var(--line); color:var(--muted); vertical-align:middle; }
 .sess-badge.test{ border-color:var(--accent); color:var(--accent); }
+
+/* ---- Sessions ---- */
+.back-btn{ margin-bottom:10px; }
+.sess-sub{ margin:-4px 0 12px; }
+.warn-note{ color:var(--accent); }
+.sess-card{ position:relative; cursor:pointer; padding-bottom:14px; }
+.sess-card.live{ border-color:var(--accent); }
+.sess-head{ display:flex; flex-direction:column; gap:2px; }
+.sess-when{ display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; }
+.sess-live{ padding:2px 7px; border-radius:5px; font-size:9px; font-weight:800; letter-spacing:.06em;
+  text-transform:uppercase; background:rgba(230,130,15,.16); color:var(--accent); border:1px solid var(--accent); }
+.sess-where{ font-size:12px; color:var(--muted); }
+.sess-meta{ display:flex; gap:14px; margin-top:8px; font-size:12px; color:var(--muted); }
+.sess-avg{ display:flex; align-items:center; gap:10px; margin-top:8px; padding-top:8px;
+  border-top:1px solid var(--line); font-size:12px; flex-wrap:wrap; }
+.sess-avg-l{ color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+.sess-avg-v{ font-weight:700; }
+.sess-open{ position:absolute; right:10px; bottom:10px; display:flex; align-items:center; gap:4px;
+  padding:5px 9px; border-radius:6px; border:1px solid var(--line); background:var(--surface);
+  color:var(--muted); font-size:11px; font-weight:700; cursor:pointer; }
+.sess-open:hover{ border-color:var(--accent); color:var(--text); }
+.sess-open svg{ width:12px; height:12px; }
+.sess-player-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.sess-avatar{ flex:none; width:26px; height:26px; border-radius:50%; display:flex; align-items:center;
+  justify-content:center; background:var(--surface); border:1px solid var(--line);
+  font-size:12px; font-weight:800; }
+.sess-player-name{ font-weight:700; font-size:14px; }
+.sess-hands{ margin-left:auto; font-size:11px; color:var(--muted); }
+.sess-stats{ display:flex; gap:8px; margin-top:10px; }
+.sess-stat{ flex:1; padding:8px; border-radius:8px; background:var(--surface); border:1px solid var(--line); text-align:center; }
+.sess-stat-v{ font-size:16px; font-weight:800; }
+.sess-stat-l{ font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
+.sess-stat-l .nd{ text-transform:none; letter-spacing:0; opacity:.75; }
+.sess-notes{ margin-top:10px; border-top:1px solid var(--line); padding-top:8px;
+  display:flex; flex-direction:column; gap:8px; }
+.sess-note-meta{ font-size:10px; color:var(--muted); }
+.sess-note-text{ font-size:13px; }

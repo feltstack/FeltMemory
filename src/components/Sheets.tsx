@@ -334,7 +334,7 @@ function PlayerSheet({ playerId, seatNo }: { playerId: number; seatNo?: number }
   function addNote() {
     const text = noteDraft.trim();
     if (!text) return;
-    void repo.addPlayerNote(playerId, text, live.handNo);
+    void repo.addPlayerNote(playerId, text, live.handNo, live.sessionId);
     setNoteDraft('');
     toast('Note added');
   }

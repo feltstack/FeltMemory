@@ -8,17 +8,17 @@ import HudScreen from './screens/HudScreen';
 import PopulationScreen from './screens/PopulationScreen';
 import PlayersScreen from './screens/PlayersScreen';
 import VenuesScreen from './screens/VenuesScreen';
-import ResultsScreen from './screens/ResultsScreen';
+import SessionsScreen from './screens/SessionsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
-type ScreenKey = 'hud' | 'population' | 'players' | 'venues' | 'results' | 'settings';
+type ScreenKey = 'hud' | 'population' | 'players' | 'venues' | 'sessions' | 'settings';
 
 const TABS: [ScreenKey, string, string][] = [
   ['hud', 'Live HUD', 'hud'],
   ['population', 'Population', 'population'],
   ['players', 'Players', 'players'],
   ['venues', 'Venues', 'venues'],
-  ['results', 'Results', 'results'],
+  ['sessions', 'Sessions', 'sessions'],
   ['settings', 'Settings', 'settings'],
 ];
 
@@ -27,7 +27,7 @@ const TITLES: Record<ScreenKey, string> = {
   population: 'Population',
   players: 'Players',
   venues: 'Venues',
-  results: 'Results',
+  sessions: 'Sessions',
   settings: 'Settings',
 };
 
@@ -139,7 +139,7 @@ export default function App() {
           {screen === 'population' && <PopulationScreen />}
           {screen === 'players' && <PlayersScreen />}
           {screen === 'venues' && <VenuesScreen />}
-          {screen === 'results' && <ResultsScreen />}
+          {screen === 'sessions' && <SessionsScreen />}
           {screen === 'settings' && <SettingsScreen />}
         </main>
 
