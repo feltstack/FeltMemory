@@ -598,3 +598,32 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .add-seat-row:disabled{ opacity:.5; cursor:default; }
 .add-seat-plus{ font-size:16px; font-weight:800; color:var(--accent); }
 .add-seat-row:disabled .add-seat-plus{ color:var(--muted); }
+
+/* ---- compact session header: one row while a session is live ---- */
+.topbar.live{ padding:calc(8px + var(--safe-top)) 12px 8px; }
+.topbar-row.compact{ gap:8px; }
+.topbar-row.compact .actions{ flex:none; gap:6px; }
+.session-meta.compact{
+  margin-top:0; flex:1 1 auto; min-width:0; flex-wrap:nowrap;
+  overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch;
+  gap:6px; padding:2px 0;
+}
+.session-meta.compact::-webkit-scrollbar{ display:none; }
+.session-meta.compact .pill{ flex:none; padding:4px 8px; font-size:11.5px; white-space:nowrap; }
+/* interactive controls keep a ≥40px target even though the pills are small */
+.session-meta.compact .break-btn,
+.session-meta.compact .end-btn{ min-height:40px; display:inline-flex; align-items:center; padding:0 11px; }
+.topbar-row.compact .icon-btn{ width:40px; height:40px; }
+.topbar-row.compact .edit-btn{ min-height:40px; padding:0 8px; }
+/* keep End reachable on a 390px phone: venue truncates rather than pushing it off */
+.session-meta.compact .venue-pill{ max-width:92px; overflow:hidden; text-overflow:ellipsis; }
+.session-meta.compact .end-btn{ margin-left:auto; }
+
+/* 390px can't hold stakes + venue + timer + Pause + hand + End at ≥40px targets.
+   Below 560px the two static labels (and About) give way — they don't change
+   during a session — so the live controls keep full-size tap targets. */
+@media (max-width:560px){
+  .session-meta.compact .stakes-pill,
+  .session-meta.compact .venue-pill{ display:none; }
+  .topbar-row.compact .icon-btn.hide-narrow{ display:none; }
+}

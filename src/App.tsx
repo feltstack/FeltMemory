@@ -99,7 +99,7 @@ function BreakDialog({
   );
 }
 
-function SessionMeta() {
+function SessionMeta({ compact = false }: { compact?: boolean }) {
   const { live, sessionActive, endSession, saveHand, pauseSession, resumeSession } = useApp();
   const { toast } = useUi();
   const [, tick] = useState(0);
@@ -119,7 +119,7 @@ function SessionMeta() {
   const over = left != null && left <= 0;
 
   return (
-    <div className={`session-meta${paused ? ' paused' : ''}`}>
+    <div className={`session-meta${paused ? ' paused' : ''}${compact ? ' compact' : ''}`}>
       {askBreak && (
         <BreakDialog
           onStart={(mins) => {
@@ -130,9 +130,11 @@ function SessionMeta() {
           onCancel={() => setAskBreak(false)}
         />
       )}
-      <span className="pill">{live.stakes}</span>
-      <span className="pill">{live.venueName}</span>
-      <span className="pill timer">⏱ {h}h {m}m</span>
+      <span className="pill stakes-pill">{live.stakes}</span>
+      <span className="pill venue-pill" title={live.venueName}>
+        {live.venueName}
+      </span>
+      <span className="pill timer">⏱ {h}h{m}m</span>
       <button
         className={`pill break-btn${paused ? ' on' : ''}`}
         onClick={() => {
@@ -154,7 +156,9 @@ function SessionMeta() {
               : `back in ${fmtClock(left)}`}
         </span>
       )}
-      <span className="pill">Hand #{live.handNo}</span>
+      <span className="pill hand-pill" title={`Hand #${live.handNo}`}>
+        #{live.handNo}
+      </span>
       <button
         className="pill end-btn"
         onClick={async () => {
@@ -181,6 +185,9 @@ export default function App() {
   const { ready, sessionActive, saveHand, live } = useApp();
   const { toast, toastMsg, toastShow, openMenu, editMode, toggleEdit } = useUi();
   const [screen, setScreen] = useState<ScreenKey>('hud');
+  // Active session: collapse the header to a single row — the tab bar already
+  // names the screen, and vertical space is scarce with 9 seat rows below.
+  const hudLive = screen === 'hud' && sessionActive;
 
   if (!ready) return null;
 
@@ -205,12 +212,12 @@ export default function App() {
       </nav>
 
       <div className="main-col">
-        <header className="topbar">
-          <div className="topbar-row">
-            <h1>{TITLES[screen]}</h1>
+        <header className={`topbar${hudLive ? ' live' : ''}`}>
+          <div className={`topbar-row${hudLive ? ' compact' : ''}`}>
+            {hudLive ? <SessionMeta compact /> : <h1>{TITLES[screen]}</h1>}
             <div className="actions">
               <button
-                className="icon-btn"
+                className={`icon-btn${hudLive ? ' hide-narrow' : ''}`}
                 title="About"
                 onClick={() =>
                   toast('FeltMemory — tap seats to log actions, ✓ saves the hand')
@@ -234,7 +241,6 @@ export default function App() {
               )}
             </div>
           </div>
-          {screen === 'hud' && <SessionMeta />}
         </header>
 
         <main className="content">
