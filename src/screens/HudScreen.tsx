@@ -627,10 +627,17 @@ function SeatList({ editing = false }: { editing?: boolean }) {
             ) : (
               <button
                 className="sr-note"
-                title="Tap to edit notes"
+                title="Tap to edit notes — tap again to close"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (s.playerId == null) return;
+                  // Tapping the note zone again closes the panel — same button,
+                  // both directions, so it never takes two taps to get rid of.
+                  if (noteSeat === s.seatNo) {
+                    setNoteSeat(null);
+                    setEditNoteIdx(null);
+                    return;
+                  }
                   setNoteSeat(s.seatNo);
                   if (rn) {
                     setEditNoteIdx(rn.index);
