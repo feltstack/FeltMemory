@@ -589,3 +589,12 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 .break-custom{ display:flex; gap:8px; margin-top:10px; }
 .break-custom input{ flex:1; min-width:0; }
 .modal-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:14px; }
+
+/* edit-mode: add a seat without leaving the HUD */
+.add-seat-row{ display:flex; align-items:center; justify-content:center; gap:8px; width:100%;
+  min-height:48px; margin-top:6px; border-radius:8px; border:1px dashed var(--line);
+  background:transparent; color:var(--muted); font-size:13px; font-weight:700; cursor:pointer; }
+.add-seat-row:hover:not(:disabled){ border-color:var(--accent); color:var(--text); }
+.add-seat-row:disabled{ opacity:.5; cursor:default; }
+.add-seat-plus{ font-size:16px; font-weight:800; color:var(--accent); }
+.add-seat-row:disabled .add-seat-plus{ color:var(--muted); }

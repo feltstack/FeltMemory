@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db/db';
 import * as repo from '../db/repo';
-import { dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
+import { MAX_SEATS, canAddSeat, dealerXY, pendingBadge, potWayLabel, seatXY } from '../db/stats';
 import { confidenceLabel, exploitLabel } from '../db/exploits';
 import {
   DEFAULT_SESSION_KIND,
@@ -62,7 +62,7 @@ export default function HudScreen() {
   return (
     <div className="screen">
       {editMode && (
-        <div className="edit-hint">Drag ≡ to reorder · tap − to remove a seat · Done when finished</div>
+        <div className="edit-hint">Drag ≡ to reorder · tap − to remove a seat · ＋ Add seat at the bottom · Done when finished</div>
       )}
       <div className={showCompanion ? 'hud-grid' : ''}>
         <div>
@@ -748,7 +748,30 @@ function SeatList({ editing = false }: { editing?: boolean }) {
           </div>
         );
       })}
+      {editing && <AddSeatRow />}
     </div>
+  );
+}
+
+/** Edit-mode footer: grow the table without leaving the HUD. */
+function AddSeatRow() {
+  const { live, dispatch } = useApp();
+  const { toast } = useUi();
+  const full = !canAddSeat(live.seats);
+
+  return (
+    <button
+      className="add-seat-row"
+      disabled={full}
+      onClick={() => {
+        if (full) return;
+        dispatch({ type: 'ADD_SEAT' });
+        toast(`Seat ${live.seats.length + 1} added — ${live.seats.length + 1}-max`);
+      }}
+    >
+      <span className="add-seat-plus">＋</span>
+      {full ? `Table is full (${MAX_SEATS} seats max)` : 'Add seat'}
+    </button>
   );
 }
 

@@ -16,6 +16,7 @@ import {
 import { DEFAULT_SESSION_KIND, type SessionKind } from '../db/session-meta';
 import { pauseAt, resumeFrom } from '../db/breaks';
 import {
+  addSeat,
   applyTap,
   assignPositions,
   nextButtonSeat,
@@ -81,6 +82,7 @@ type Action =
   | { type: 'UNSEAT_VILLAINS' }
   | { type: 'REMOVE_SEAT'; seatNo: number }
   | { type: 'MOVE_SEAT'; from: number; to: number }
+  | { type: 'ADD_SEAT' }
   | { type: 'TOGGLE_SITOUT'; seatNo: number }
   | { type: 'MOVE_HERO'; seatNo: number }
   | { type: 'SET_STACK'; seatNo: number; stack: string }
@@ -116,6 +118,13 @@ function reducer(live: LiveState, a: Action): LiveState {
         ? live.btnSeat
         : (seats.find((s) => !s.open)?.seatNo ?? 1);
       return withPositions({ ...live, tableSize: size, heroSeat, seats, btnSeat });
+    }
+    case 'ADD_SEAT': {
+      const seats = addSeat(live.seats);
+      if (seats.length === live.seats.length) return live; // at the cap
+      // Button, seated players, sit-outs and pending taps all carry over; only
+      // the seat count and the derived position labels change.
+      return withPositions({ ...live, seats, tableSize: seats.length });
     }
     case 'ASSIGN_SEAT': {
       const seats = live.seats.map((s) =>

@@ -7,6 +7,7 @@ import { useApp } from '../state/AppContext';
 import { useUi } from '../state/UiContext';
 import { Icon } from './Icons';
 import { StatBox, Switch, TagChip, initialsOf } from './Bits';
+import { MAX_SEATS, canAddSeat } from '../db/stats';
 import { ExploitChips } from './ExploitChips';
 import { toggleDeleteConfirm, orderedNotes } from '../db/notes';
 import { confidenceLabel, exploitLabel } from '../db/exploits';
@@ -377,6 +378,16 @@ function MenuSheet() {
     closeSheet();
   };
 
+  const addSeatAction = () => {
+    if (!canAddSeat(live.seats)) {
+      toast(`Table is full (${MAX_SEATS} seats max)`);
+      return;
+    }
+    dispatch({ type: 'ADD_SEAT' });
+    toast(`Seat ${live.seats.length + 1} added — ${live.seats.length + 1}-max`);
+    closeSheet();
+  };
+
   const end = async () => {
     if (live.currentEntries.length > 0 && window.confirm('Save the hand in progress first?')) {
       await saveHand();
@@ -395,6 +406,9 @@ function MenuSheet() {
         <button className="sheet-close" onClick={closeSheet}>✕</button>
       </div>
       <div className="menu-actions">
+        <button className="btn block" onClick={addSeatAction}>
+          Add a seat ({live.seats.length}-max now)
+        </button>
         <button className="btn block" onClick={fillAll}>
           Fill all open seats ({openSeats.length}) with No Names
         </button>

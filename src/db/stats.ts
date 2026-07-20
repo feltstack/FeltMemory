@@ -88,6 +88,36 @@ export function removeSeatAt(seats: Seat[], seatNo: number): Seat[] {
   return bySeatNo(seats).filter((s) => s.seatNo !== seatNo);
 }
 
+/** Hard cap on seats, matching the Settings table-size control. */
+export const MAX_SEATS = 11;
+
+/**
+ * Append an open seat at the next number (7-max → 8-max). Everything already on
+ * the table is left untouched — seated players, sit-outs, stacks, hero — because
+ * mid-session this runs while a hand is in progress. Returns the same seats when
+ * the table is already at MAX_SEATS.
+ */
+export function addSeat(seats: Seat[], max = MAX_SEATS): Seat[] {
+  const arr = bySeatNo(seats);
+  if (arr.length >= max) return arr;
+  return [
+    ...arr,
+    {
+      seatNo: arr.length + 1,
+      playerId: null,
+      hero: false,
+      open: true,
+      stack: '',
+      pos: '',
+      dealer: false,
+    },
+  ];
+}
+
+export function canAddSeat(seats: Seat[], max = MAX_SEATS): boolean {
+  return seats.length < max;
+}
+
 /** Renumber seatNo = position (1-based), preserving array order. */
 export function reindexSeats(seats: Seat[]): Seat[] {
   return seats.map((s, i) => ({ ...s, seatNo: i + 1 }));

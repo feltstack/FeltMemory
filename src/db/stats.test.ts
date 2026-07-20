@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  MAX_SEATS,
   actingOrder,
+  addSeat,
   applyTap,
   assignPositions,
+  canAddSeat,
   computeHandDeltas,
   potWayLabel,
   dealerXY,
@@ -350,5 +353,76 @@ describe('potWayLabel', () => {
     expect(potWayLabel(mk([2, 3]))).toBe('Heads-up');
     expect(potWayLabel(mk([2, 3, 4]))).toBe('3-way');
     expect(potWayLabel(mk([2, 2, 3]))).toBe('Heads-up');
+  });
+});
+
+describe('addSeat (grow the table mid-session)', () => {
+  it('appends one open seat at the next number', () => {
+    const seats = addSeat(table9());
+    expect(seats).toHaveLength(10);
+    const added = seats[9];
+    expect(added.seatNo).toBe(10);
+    expect(added.open).toBe(true);
+    expect(added.playerId).toBeNull();
+    expect(added.hero).toBe(false);
+  });
+
+  it('preserves every existing seat exactly — players, hero, seat numbers', () => {
+    const before = table9();
+    const after = addSeat(before);
+    expect(after.slice(0, 9)).toEqual(before);
+  });
+
+  it('preserves sit-outs and stacks on the seats already there', () => {
+    const before = table9().map((s) =>
+      s.seatNo === 3 ? { ...s, sittingOut: true, stack: '450' } : s,
+    );
+    const after = addSeat(before);
+    const seat3 = after.find((s) => s.seatNo === 3)!;
+    expect(seat3.sittingOut).toBe(true);
+    expect(seat3.stack).toBe('450');
+  });
+
+  it('keeps the button where it was and extends the rotation', () => {
+    const before = table9();
+    const btn = 4;
+    const orderBefore = actingOrder(before, btn, false);
+    const after = addSeat(before);
+    // the button seat still exists and is unchanged
+    expect(after.find((s) => s.seatNo === btn)).toEqual(before.find((s) => s.seatNo === btn));
+    // the new seat is open, so it does not join the rotation until someone sits
+    expect(actingOrder(after, btn, false)).toEqual(orderBefore);
+
+    // seat someone in it and the rotation grows by exactly that seat
+    const seated = after.map((s) => (s.seatNo === 10 ? { ...s, open: false, playerId: 999 } : s));
+    const orderAfter = actingOrder(seated, btn, false);
+    expect(orderAfter).toHaveLength(orderBefore.length + 1);
+    expect(orderAfter).toContain(10);
+  });
+
+  it('re-flows position labels to include the newly seated player', () => {
+    const grown = addSeat(table9()).map((s) =>
+      s.seatNo === 10 ? { ...s, open: false, playerId: 999 } : s,
+    );
+    const positions = assignPositions(grown, 1, false);
+    expect(positions.find((s) => s.seatNo === 1)!.pos).toBe('BTN');
+    expect(positions.find((s) => s.seatNo === 10)!.pos).toBeTruthy();
+    // every non-open, non-sitting-out seat gets a label
+    const labelled = positions.filter((s) => !s.open && !s.sittingOut);
+    expect(labelled.every((s) => s.pos !== '')).toBe(true);
+  });
+
+  it('stops at the seat cap', () => {
+    let seats = table9();
+    while (canAddSeat(seats)) seats = addSeat(seats);
+    expect(seats).toHaveLength(MAX_SEATS);
+    expect(canAddSeat(seats)).toBe(false);
+    expect(addSeat(seats)).toHaveLength(MAX_SEATS);
+  });
+
+  it('grows a small table one seat at a time', () => {
+    const heads = table9().slice(0, 2);
+    const three = addSeat(heads);
+    expect(three.map((s) => s.seatNo)).toEqual([1, 2, 3]);
   });
 });
