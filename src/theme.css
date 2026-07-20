@@ -5,6 +5,9 @@
   --border:#2a2f38; --text:#eef0f3; --text-dim:#9aa3af; --text-faint:#5b636f;
   --accent:#ff9f2e; --accent-dim:#8a5a24; --felt:#0f3d2e; --felt-2:#145a44;
   --green:#39c17a; --blue:#4d9fff; --red:#ff5d5d; --grey:#6b7280;
+  /* postflop "board" input — desaturated felt, dark enough to sit back */
+  --felt-input:#152a22; --felt-input-border:#244035; --felt-input-text:#eef0f3;
+  --felt-input-ph:#6f8a7e;
   --radius:14px; --radius-sm:9px; --shadow:0 8px 24px rgba(0,0,0,.35);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -13,8 +16,16 @@ html[data-theme="light"]{
   --bg:#f2f3f5; --surface:#ffffff; --surface-2:#f7f8fa; --surface-3:#eceef1;
   --border:#dde1e6; --text:#12151a; --text-dim:#5b636f; --text-faint:#9aa3af;
   --accent:#e6820f; --accent-dim:#f4c98a; --felt:#0f3d2e; --felt-2:#145a44;
+  /* light mode: same felt family, inverted — pale tint with dark text */
+  --felt-input:#e9f1ec; --felt-input-border:#c4d8cd; --felt-input-text:#12211b;
+  --felt-input-ph:#6b8579;
 }
-html[data-glare="true"]{ --bg:#000000; --surface:#0a0a0a; --surface-2:#111214; --surface-3:#17181b; }
+html[data-glare="true"]{
+  --bg:#000000; --surface:#0a0a0a; --surface-2:#111214; --surface-3:#17181b;
+  /* glare mode is for bright card rooms — pull the felt tint down further so it
+     stays a hint of green rather than a lit panel */
+  --felt-input:#0a1712; --felt-input-border:#16281f; --felt-input-ph:#5c7469;
+}
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
@@ -630,7 +641,15 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
 
 /* ---- postflop quick-entry + in-flow save-hand ✓ ---- */
 .postflop-row{ display:flex; align-items:center; gap:8px; margin:10px 0 8px; }
-.postflop-input{ flex:1 1 auto; min-width:0; min-height:44px; font-size:13px; }
+.postflop-input{
+  flex:1 1 auto; min-width:0; min-height:44px; font-size:13px;
+  background:var(--felt-input); border:1px solid var(--felt-input-border);
+  color:var(--felt-input-text); caret-color:var(--accent);
+  border-radius:10px; padding:11px 12px; outline:none;
+  -webkit-appearance:none; appearance:none;
+}
+.postflop-input::placeholder{ color:var(--felt-input-ph); opacity:1; }
+.postflop-input:focus{ border-color:var(--accent); }
 .postflop-clear{ flex:none; width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
   background:var(--surface-2); color:var(--text-dim); font-size:13px; cursor:pointer; }
 .postflop-clear:hover{ border-color:var(--red); color:var(--red); }
