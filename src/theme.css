@@ -627,3 +627,34 @@ select.mini-select{ background:var(--surface-2); border:1px solid var(--border);
   .session-meta.compact .venue-pill{ display:none; }
   .topbar-row.compact .icon-btn.hide-narrow{ display:none; }
 }
+
+/* ---- postflop quick-entry + in-flow save-hand ✓ ---- */
+.postflop-row{ display:flex; align-items:center; gap:8px; margin:10px 0 8px; }
+.postflop-input{ flex:1 1 auto; min-width:0; min-height:44px; font-size:13px; }
+.postflop-clear{ flex:none; width:32px; height:32px; border-radius:50%; border:1px solid var(--border);
+  background:var(--surface-2); color:var(--text-dim); font-size:13px; cursor:pointer; }
+.postflop-clear:hover{ border-color:var(--red); color:var(--red); }
+.save-hand{ flex:none; width:56px; height:56px; border-radius:50%; border:none;
+  background:var(--accent); color:#1a1200; display:flex; align-items:center; justify-content:center;
+  box-shadow:0 4px 14px rgba(230,130,15,.35); cursor:pointer; }
+.save-hand svg{ width:28px; height:28px; stroke-width:3; }
+.save-hand:active{ transform:scale(.96); }
+
+/* ---- header: tighter still, and a readable Pause pill ---- */
+.topbar.live{ padding:calc(4px + var(--safe-top)) 12px 4px; }
+.session-meta.compact{ padding:0; }
+.session-meta.compact .pill{ padding:3px 8px; }
+.session-meta.compact .break-btn,
+.session-meta.compact .end-btn{ min-height:40px; }
+.break-btn{
+  background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+  font-weight:700;
+}
+.break-btn:hover{ border-color:var(--accent); }
+.break-btn.on{ background:rgba(230,130,15,.16); border-color:var(--accent); color:var(--accent); }
+.sess-hand-title{ font-size:11px; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--text-faint); font-weight:700; margin-bottom:8px; }
+.sess-hand{ display:flex; gap:10px; padding:5px 0; border-top:1px solid var(--line); font-size:13px; }
+.sess-hand:first-of-type{ border-top:none; }
+.sess-hand-no{ flex:none; color:var(--text-faint); font-variant-numeric:tabular-nums; }
+.sess-hand-text{ flex:1; min-width:0; word-break:break-word; font-family:ui-monospace,Menlo,monospace; font-size:12px; }

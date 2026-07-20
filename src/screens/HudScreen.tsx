@@ -89,6 +89,7 @@ export default function HudScreen() {
         </div>
       )}
       <UndoBar />
+      <PostflopRow />
       <BlindToggles />
       {!editMode && <PlayerCards />}
     </div>
@@ -991,6 +992,50 @@ function PlayerCards() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Postflop quick-entry + the save-hand ✓. Free text only — no parsing yet; it
+ * rides along on the committed hand so the shorthand is there when a parser
+ * (or just a human) reads it back in the Sessions detail.
+ */
+function PostflopRow() {
+  const { live, dispatch, saveHand } = useApp();
+  const { toast } = useUi();
+
+  return (
+    <div className="postflop-row">
+      <input
+        className="postflop-input"
+        value={live.postflop ?? ''}
+        placeholder="Postflop: K87sds B,c,c T:2x B,F,C R:7h B,F"
+        onChange={(e) => dispatch({ type: 'SET_POSTFLOP', text: e.target.value })}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur();
+        }}
+      />
+      {(live.postflop ?? '') !== '' && (
+        <button
+          className="postflop-clear"
+          title="Clear the postflop text"
+          onClick={() => dispatch({ type: 'SET_POSTFLOP', text: '' })}
+        >
+          ✕
+        </button>
+      )}
+      <button
+        className="save-hand"
+        title="Save hand — counts a dealt hand for everyone seated, advances the button"
+        onClick={async () => {
+          const n = live.handNo;
+          await saveHand();
+          toast(`Hand #${n} saved ✓`);
+        }}
+      >
+        <Icon name="check" />
+      </button>
     </div>
   );
 }

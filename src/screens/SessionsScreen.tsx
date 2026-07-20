@@ -84,6 +84,21 @@ function SessionDetail({
         </div>
       )}
 
+      {hands.some((h) => h.postflop) && (
+        <div className="card">
+          <div className="sess-hand-title">Postflop notes</div>
+          {[...hands]
+            .filter((h) => h.postflop)
+            .sort((a, b) => a.handNo - b.handNo)
+            .map((h) => (
+              <div className="sess-hand" key={h.handNo}>
+                <span className="sess-hand-no">#{h.handNo}</span>
+                <span className="sess-hand-text">{h.postflop}</span>
+              </div>
+            ))}
+        </div>
+      )}
+
       {rows.map(({ player, counters }) => {
         const notes = sessionNotes(player.notes, session.id!, session.startedAt, session.endedAt);
         return (

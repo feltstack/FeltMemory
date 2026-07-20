@@ -182,7 +182,7 @@ function SessionMeta({ compact = false }: { compact?: boolean }) {
 }
 
 export default function App() {
-  const { ready, sessionActive, saveHand, live } = useApp();
+  const { ready, sessionActive } = useApp();
   const { toast, toastMsg, toastShow, openMenu, editMode, toggleEdit } = useUi();
   const [screen, setScreen] = useState<ScreenKey>('hud');
   // Active session: collapse the header to a single row — the tab bar already
@@ -255,18 +255,6 @@ export default function App() {
         <nav className="tabbar">{TABS.map(([k, l, i]) => nav(k, l, i, false))}</nav>
       </div>
 
-      {screen === 'hud' && sessionActive && (
-        <button
-          className="fab"
-          title="Save hand — counts a dealt hand for everyone seated, advances the button"
-          onClick={async () => {
-            await saveHand();
-            toast(`Hand #${live.handNo} saved ✓`);
-          }}
-        >
-          <Icon name="check" />
-        </button>
-      )}
 
       <SheetHost />
       <div className={`toast ${toastShow ? 'show' : ''}`}>{toastMsg}</div>

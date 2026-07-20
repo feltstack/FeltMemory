@@ -71,7 +71,7 @@ const emptyLive = (): LiveState => ({
 
 /* ---------------- reducer ---------------- */
 
-type Action =
+export type Action =
   | { type: 'RESTORE'; live: LiveState }
   | { type: 'SESSION_STARTED'; live: LiveState }
   | { type: 'SESSION_ENDED' }
@@ -91,6 +91,7 @@ type Action =
   | { type: 'TAP'; seatNo: number; playerId: number | null; action: 'call' | 'raise' }
   | { type: 'UNDO_TAP' }
   | { type: 'CLEAR_HAND' }
+  | { type: 'SET_POSTFLOP'; text: string }
   | { type: 'PAUSE'; mins: number | null }
   | { type: 'RESUME' }
   | { type: 'HAND_COMMITTED'; nextBtn: number };
@@ -102,7 +103,7 @@ function withPositions(live: LiveState): LiveState {
   };
 }
 
-function reducer(live: LiveState, a: Action): LiveState {
+export function reducer(live: LiveState, a: Action): LiveState {
   switch (a.type) {
     case 'RESTORE':
       return withPositions(a.live);
@@ -254,12 +255,16 @@ function reducer(live: LiveState, a: Action): LiveState {
       return { ...live, currentEntries: live.currentEntries.slice(0, -1) };
     case 'CLEAR_HAND':
       return { ...live, currentEntries: [] };
+    case 'SET_POSTFLOP':
+      return { ...live, postflop: a.text };
     case 'HAND_COMMITTED':
       return withPositions({
         ...live,
         btnSeat: a.nextBtn,
         handNo: live.handNo + 1,
         currentEntries: [],
+        // the note described THIS hand — the next one starts blank
+        postflop: '',
         straddle: live.mustStraddle ? live.straddle : false,
       });
     default:

@@ -11,13 +11,13 @@ import {
 import { confirmExploit, cycleExploit, sameHandExploits } from './exploits';
 import { applyNoteEdit, preserveCustomName, removeNoteAt, togglePin } from './notes';
 import { tagStateAfter } from './tags';
+import { buildHandRecord } from './hand-record';
 import { DEFAULT_SESSION_KIND, type SessionKind } from './session-meta';
 import {
   defaultSettings,
   emptyCounters,
   nowStamp,
   today,
-  type HandRecord,
   type LiveState,
   type Note,
   type Player,
@@ -285,18 +285,7 @@ export async function commitHand(live: LiveState): Promise<number> {
       });
     }
 
-    const rec: HandRecord = {
-      sessionId: live.sessionId!,
-      handNo: live.handNo,
-      ts: new Date().toISOString(),
-      btnSeat: live.btnSeat,
-      noSB: live.noSB,
-      straddle: live.straddle,
-      entries: live.currentEntries,
-      dealtPlayerIds: [...deltas.keys()],
-      seats: live.seats.map((x) => ({ ...x })),
-    };
-    await db.hands.add(rec);
+    await db.hands.add(buildHandRecord(live, [...deltas.keys()]));
   });
 
   return next;

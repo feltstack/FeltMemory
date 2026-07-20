@@ -133,6 +133,8 @@ export interface HandRecord {
   straddle: boolean;
   entries: HandEntry[];
   dealtPlayerIds: number[];
+  /** Free-text postflop shorthand typed during the hand (unparsed, as entered). */
+  postflop?: string;
   /** Seat snapshot at commit time. Required to REPLAY the hand: acting order and
    *  3-bet opportunities depend on who sat where, which entries alone can't give. */
   seats?: Seat[];
@@ -160,6 +162,8 @@ export interface LiveState {
   pausedAt?: string | null;
   breakMs?: number;
   breakMins?: number | null;
+  /** Postflop quick-entry text for the hand in progress; cleared on commit. */
+  postflop?: string;
   tableSize: number;
   seats: Seat[];
   btnSeat: number;
